@@ -1,0 +1,32 @@
+# ── Core UI ────────────────────────────────────────────────────────────────
+gradio==4.44.0
+
+# ── Vision model & inference ────────────────────────────────────────────────
+transformers==4.44.2
+accelerate==0.34.2
+optimum[amd]==1.22.0
+sentencepiece==0.2.0
+tiktoken==0.7.0
+
+# ── Image handling ──────────────────────────────────────────────────────────
+Pillow==10.4.0
+
+# ── PyTorch (ROCm build installed separately on AMD hardware) ───────────────
+# On AMD MI300X with ROCm: install via
+#   pip install torch --index-url https://download.pytorch.org/whl/rocm6.1
+# The CPU/CUDA wheel is listed here as a fallback for non-AMD environments.
+torch==2.4.0
+
+# ── HuggingFace Hub (model download, HF Spaces auth) ───────────────────────
+huggingface_hub==0.24.6
+
+# ── LangChain (agent orchestration) ────────────────────────────────────────
+langchain==0.2.16
+langchain-community==0.2.16
+
+# ── OpenAI SDK (optional API fallback) ─────────────────────────────────────
+openai==1.45.0
+
+# ── Misc utilities ──────────────────────────────────────────────────────────
+requests==2.32.3
+numpy==1.26.4

@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# IDE / editor
+.vscode/
+.idea/
+*.stackdump
+
+# Claude Code session files
+.claude/
+
+# HuggingFace model cache
+.cache/
+
+# macOS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
