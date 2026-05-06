@@ -52,6 +52,8 @@ _I18N = {
         "metrics_latency":        "Latency",
         "metrics_throughput":     "Throughput",
         "metrics_tokens":         "tokens",
+        "region_label":           "Affected Body Region",
+        "region_none":            "Not specified",
     },
     "vn": {
         "img_label":              "Tải lên hình ảnh y tế",
@@ -74,6 +76,8 @@ _I18N = {
         "metrics_latency":        "Độ trễ",
         "metrics_throughput":     "Thông lượng",
         "metrics_tokens":         "token",
+        "region_label":           "Vùng cơ thể bị ảnh hưởng",
+        "region_none":            "Không xác định",
     },
     "zh": {
         "img_label":              "上传医学图像",
@@ -96,6 +100,8 @@ _I18N = {
         "metrics_latency":        "延迟",
         "metrics_throughput":     "吞吐量",
         "metrics_tokens":         "tokens",
+        "region_label":           "受影响的身体部位",
+        "region_none":            "未指定",
     },
     "es": {
         "img_label":              "Subir imagen médica",
@@ -118,6 +124,8 @@ _I18N = {
         "metrics_latency":        "Latencia",
         "metrics_throughput":     "Rendimiento",
         "metrics_tokens":         "tokens",
+        "region_label":           "Región corporal afectada",
+        "region_none":            "No especificado",
     },
     "fr": {
         "img_label":              "Télécharger une image médicale",
@@ -140,6 +148,8 @@ _I18N = {
         "metrics_latency":        "Latence",
         "metrics_throughput":     "Débit",
         "metrics_tokens":         "tokens",
+        "region_label":           "Région corporelle affectée",
+        "region_none":            "Non spécifié",
     },
     "ja": {
         "img_label":              "医療画像をアップロード",
@@ -162,6 +172,8 @@ _I18N = {
         "metrics_latency":        "レイテンシ",
         "metrics_throughput":     "スループット",
         "metrics_tokens":         "トークン",
+        "region_label":           "患部の体の部位",
+        "region_none":            "指定なし",
     },
 }
 
@@ -215,6 +227,51 @@ _SEVERITY_TRANSLATE = {
     "fr": {"Low": "Faible",    "Medium": "Modérée",    "High": "Élevée", "Urgent": "Urgente"},
     "ja": {"Low": "軽度",       "Medium": "中等度",      "High": "重度",   "Urgent": "緊急"},
 }
+
+
+# ---------------------------------------------------------------------------
+# Anatomical Region Selector
+# ---------------------------------------------------------------------------
+
+# Regions shown as a compact grid; value passed to prompt in English
+_BODY_REGIONS = [
+    "Head / Face", "Neck", "Chest", "Abdomen",
+    "Upper Back", "Lower Back", "Left Arm", "Right Arm",
+    "Left Hand", "Right Hand", "Left Leg", "Right Leg",
+    "Left Foot", "Right Foot", "Groin / Genital", "Buttocks",
+]
+
+BODY_MAP_SVG = """
+<div style='display:flex; flex-direction:column; align-items:center; gap:4px;
+            padding:8px 0; user-select:none;'>
+  <svg viewBox="0 0 80 180" width="72" height="162"
+       xmlns="http://www.w3.org/2000/svg" style="opacity:0.55;">
+    <!-- head -->
+    <ellipse cx="40" cy="14" rx="11" ry="13" fill="#4b5563"/>
+    <!-- neck -->
+    <rect x="35" y="26" width="10" height="8" rx="2" fill="#4b5563"/>
+    <!-- torso -->
+    <rect x="22" y="34" width="36" height="44" rx="5" fill="#374151"/>
+    <!-- left arm -->
+    <rect x="8"  y="34" width="12" height="36" rx="5" fill="#4b5563"/>
+    <!-- right arm -->
+    <rect x="60" y="34" width="12" height="36" rx="5" fill="#4b5563"/>
+    <!-- left hand -->
+    <ellipse cx="14" cy="78" rx="7" ry="5" fill="#4b5563"/>
+    <!-- right hand -->
+    <ellipse cx="66" cy="78" rx="7" ry="5" fill="#4b5563"/>
+    <!-- left leg -->
+    <rect x="23" y="80" width="14" height="54" rx="5" fill="#4b5563"/>
+    <!-- right leg -->
+    <rect x="43" y="80" width="14" height="54" rx="5" fill="#4b5563"/>
+    <!-- left foot -->
+    <ellipse cx="30" cy="140" rx="9" ry="5" fill="#4b5563"/>
+    <!-- right foot -->
+    <ellipse cx="50" cy="140" rx="9" ry="5" fill="#4b5563"/>
+  </svg>
+  <div style='font-size:0.6rem; color:#4b5563; font-family:monospace;'>anatomical map</div>
+</div>
+"""
 
 
 def _severity_badge(severity: str) -> str:
@@ -358,63 +415,69 @@ def _error_html(t: dict, exc: Exception) -> str:
 
 
 def _ui_updates(lang_choice: str):
-    """Return gr.update() for the 3 translatable input-area components (no output_html)."""
+    """Return gr.update() for the 4 translatable input-area components (no output_html)."""
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
+    region_choices = [t["region_none"]] + _BODY_REGIONS
     return (
         gr.update(label=t["img_label"]),
         gr.update(label=t["symptoms_label"], placeholder=t["symptoms_placeholder"]),
         gr.update(value=t["analyze_btn"]),
+        gr.update(label=t["region_label"], choices=region_choices, value=t["region_none"]),
     )
 
 
-def on_lang_change(lang_choice: str, image, symptoms: str):
+def on_lang_change(lang_choice: str, image, symptoms: str, region_display: str):
     """
     Language switch handler.
     - Always updates UI labels.
     - If there is existing content (image or symptoms), re-runs analysis in the new language.
-    - If no content, shows the translated empty placeholder (does NOT wipe an existing result
-      that the user might still be reading — but empty state was already empty so it's fine).
+    - If no content, shows the translated empty placeholder.
     """
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
-    img_upd, sym_upd, btn_upd = _ui_updates(lang_choice)
+    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_choice)
+
+    # region_display may be the old lang's "Not specified" — treat those as no region
+    region = region_display if region_display in _BODY_REGIONS else ""
 
     has_content = bool(image) or bool(symptoms and symptoms.strip())
     if has_content:
         try:
-            result = get_pipeline().process(image, (symptoms or "").strip(), lang=lang)
+            result = get_pipeline().process(image, (symptoms or "").strip(), lang=lang, region=region)
             out_upd = _build_result_html(result, lang)
         except Exception as exc:
             out_upd = _error_html(t, exc)
     else:
         out_upd = _empty_output_html(lang)
 
-    return img_upd, sym_upd, btn_upd, out_upd, get_backend_status_html(lang)
+    return img_upd, sym_upd, btn_upd, region_upd, out_upd, get_backend_status_html(lang)
 
 
 def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    img_upd, sym_upd, btn_upd = _ui_updates(lang_display)
+    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_display)
     lang = _LANG_MAP.get(lang_display, "en")
-    return lang_display, img_upd, sym_upd, btn_upd, _empty_output_html(lang), get_backend_status_html(lang)
+    return lang_display, img_upd, sym_upd, btn_upd, region_upd, _empty_output_html(lang), get_backend_status_html(lang)
 
 
 # ---------------------------------------------------------------------------
 # Predict
 # ---------------------------------------------------------------------------
 
-def predict(image, symptoms: str, lang_choice: str):
+def predict(image, symptoms: str, lang_choice: str, region_display: str):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
 
     if not image and not symptoms.strip():
         return _empty_output_html(lang), get_backend_status_html(lang)
 
+    region = region_display if region_display in _BODY_REGIONS else ""
+
     try:
-        result = get_pipeline().process(image, symptoms.strip(), lang=lang)
+        result = get_pipeline().process(image, symptoms.strip(), lang=lang, region=region)
         return _build_result_html(result, lang), get_backend_status_html(lang)
     except Exception as exc:
         return _error_html(t, exc), get_backend_status_html(lang)
@@ -548,6 +611,18 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 placeholder="Describe what you feel — e.g. itchy red patch for 3 days...",
                 lines=4,
             )
+
+            with gr.Row(equal_height=True):
+                with gr.Column(scale=0, min_width=80):
+                    gr.HTML(BODY_MAP_SVG)
+                with gr.Column(scale=1):
+                    region_selector = gr.Dropdown(
+                        choices=["Not specified"] + _BODY_REGIONS,
+                        value="Not specified",
+                        label="Affected Body Region",
+                        container=True,
+                    )
+
             submit_btn = gr.Button("🔬  Analyze", variant="primary", size="lg")
 
             gr.Examples(
@@ -574,13 +649,13 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
     lang_radio.change(
         fn=on_lang_change,
-        inputs=[lang_radio, input_img, symptoms_txt],
-        outputs=[input_img, symptoms_txt, submit_btn, output_html, status_bar],
+        inputs=[lang_radio, input_img, symptoms_txt, region_selector],
+        outputs=[input_img, symptoms_txt, submit_btn, region_selector, output_html, status_bar],
     )
 
     submit_btn.click(
         fn=predict,
-        inputs=[input_img, symptoms_txt, lang_radio],
+        inputs=[input_img, symptoms_txt, lang_radio, region_selector],
         outputs=[output_html, status_bar],
         api_name="analyze",
     )
@@ -588,7 +663,7 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
     demo.load(
         fn=on_load,
         inputs=[],
-        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, output_html, status_bar],
+        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, output_html, status_bar],
     )
 
     gr.HTML(FOOTER_HTML)

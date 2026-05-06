@@ -14,15 +14,18 @@ _LANG_INSTRUCTIONS = {
 }
 
 
-def _build_prompt(image_path: str | None, text_description: str, lang: str) -> str:
+def _build_prompt(image_path: str | None, text_description: str, lang: str, region: str = "") -> str:
     lang_instruction = _LANG_INSTRUCTIONS.get(lang, _LANG_INSTRUCTIONS["en"])
     has_image = bool(image_path)
+    region_line = f"Affected body region: {region}\n" if region else ""
     return (
         "You are MediVision, a professional dermatology and wound-care assistant.\n"
         f"{lang_instruction}\n"
         "The user has provided"
         + (" an image of a skin condition and" if has_image else "")
-        + f" the following symptom description:\n\n{text_description}\n\n"
+        + " the following clinical information:\n\n"
+        + region_line
+        + f"Symptom description: {text_description}\n\n"
         "Analyze the above and respond with a single JSON object using these exact keys:\n"
         "  \"diagnosis\": the standard clinical/medical condition name (e.g. contact dermatitis, "
         "superficial laceration, cellulitis, tinea corporis) — NOT a restatement or summary of the "
@@ -58,6 +61,7 @@ def analyze_image_and_text(
     image_path: str | None,
     text_description: str,
     language: str = "en",
+    region: str = "",
 ) -> dict:
     """
     Run analysis via AMD Cloud backend.
@@ -68,7 +72,7 @@ def analyze_image_and_text(
     confidence_score, _metrics (latency_ms, total_tokens, tokens_per_sec).
     """
     lang = language.lower()
-    prompt = _build_prompt(image_path, text_description, lang)
+    prompt = _build_prompt(image_path, text_description, lang, region=region)
     raw, metrics = generate_response(prompt, image_path=image_path)
     result = _parse_response(raw)
     result["_metrics"] = metrics
