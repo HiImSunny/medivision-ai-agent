@@ -302,29 +302,62 @@ def _build_result_html(result: dict, lang: str) -> str:
 # UI update helpers
 # ---------------------------------------------------------------------------
 
+def _error_html(t: dict, exc: Exception) -> str:
+    return (
+        "<div style='background:#111827; border:1px solid #ef4444; border-radius:12px; "
+        "padding:24px; font-family:Arial,sans-serif; text-align:center;'>"
+        "<div style='font-size:1.5rem; margin-bottom:12px;'>⚠️</div>"
+        f"<div style='font-size:1rem; font-weight:700; color:#ef4444; margin-bottom:8px;'>{t['error_title']}</div>"
+        f"<div style='font-size:0.85rem; color:#9ca3af; margin-bottom:16px;'>{t['error_body']}</div>"
+        f"<div style='font-size:0.75rem; color:#6b7280; font-family:monospace; "
+        f"background:#1f2937; padding:8px 12px; border-radius:6px;'>{exc}</div>"
+        "</div>"
+    )
+
+
 def _ui_updates(lang_choice: str):
-    """Return gr.update() for all translatable UI components."""
+    """Return gr.update() for the 3 translatable input-area components (no output_html)."""
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
     return (
         gr.update(label=t["img_label"]),
         gr.update(label=t["symptoms_label"], placeholder=t["symptoms_placeholder"]),
         gr.update(value=t["analyze_btn"]),
-        gr.update(value=_empty_output_html(lang)),
     )
 
 
-def on_lang_change(lang_choice: str):
-    return _ui_updates(lang_choice)
+def on_lang_change(lang_choice: str, image, symptoms: str):
+    """
+    Language switch handler.
+    - Always updates UI labels.
+    - If there is existing content (image or symptoms), re-runs analysis in the new language.
+    - If no content, shows the translated empty placeholder (does NOT wipe an existing result
+      that the user might still be reading — but empty state was already empty so it's fine).
+    """
+    lang = _LANG_MAP.get(lang_choice, "en")
+    t = _I18N[lang]
+    img_upd, sym_upd, btn_upd = _ui_updates(lang_choice)
+
+    has_content = bool(image) or bool(symptoms and symptoms.strip())
+    if has_content:
+        try:
+            result = get_pipeline().process(image, (symptoms or "").strip(), lang=lang)
+            out_upd = _build_result_html(result, lang)
+        except Exception as exc:
+            out_upd = _error_html(t, exc)
+    else:
+        out_upd = _empty_output_html(lang)
+
+    return img_upd, sym_upd, btn_upd, out_upd, get_backend_status_html(lang)
 
 
 def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    img_upd, sym_upd, btn_upd, out_upd = _ui_updates(lang_display)
+    img_upd, sym_upd, btn_upd = _ui_updates(lang_display)
     lang = _LANG_MAP.get(lang_display, "en")
-    return lang_display, img_upd, sym_upd, btn_upd, out_upd, get_backend_status_html(lang)
+    return lang_display, img_upd, sym_upd, btn_upd, _empty_output_html(lang), get_backend_status_html(lang)
 
 
 # ---------------------------------------------------------------------------
@@ -342,17 +375,7 @@ def predict(image, symptoms: str, lang_choice: str):
         result = get_pipeline().process(image, symptoms.strip(), lang=lang)
         return _build_result_html(result, lang), get_backend_status_html(lang)
     except Exception as exc:
-        error_html = (
-            "<div style='background:#111827; border:1px solid #ef4444; border-radius:12px; "
-            "padding:24px; font-family:Arial,sans-serif; text-align:center;'>"
-            "<div style='font-size:1.5rem; margin-bottom:12px;'>⚠️</div>"
-            f"<div style='font-size:1rem; font-weight:700; color:#ef4444; margin-bottom:8px;'>{t['error_title']}</div>"
-            f"<div style='font-size:0.85rem; color:#9ca3af; margin-bottom:16px;'>{t['error_body']}</div>"
-            f"<div style='font-size:0.75rem; color:#6b7280; font-family:monospace; "
-            f"background:#1f2937; padding:8px 12px; border-radius:6px;'>{exc}</div>"
-            "</div>"
-        )
-        return error_html, get_backend_status_html(lang)
+        return _error_html(t, exc), get_backend_status_html(lang)
 
 
 # ---------------------------------------------------------------------------
@@ -509,8 +532,8 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
     lang_radio.change(
         fn=on_lang_change,
-        inputs=[lang_radio],
-        outputs=[input_img, symptoms_txt, submit_btn, output_html],
+        inputs=[lang_radio, input_img, symptoms_txt],
+        outputs=[input_img, symptoms_txt, submit_btn, output_html, status_bar],
     )
 
     submit_btn.click(
