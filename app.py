@@ -241,6 +241,49 @@ _BODY_REGIONS = [
     "Left Foot", "Right Foot", "Groin / Genital", "Buttocks",
 ]
 
+# Translated display names — same order as _BODY_REGIONS
+_REGION_TRANSLATIONS = {
+    "en": ["Head / Face", "Neck", "Chest", "Abdomen",
+           "Upper Back", "Lower Back", "Left Arm", "Right Arm",
+           "Left Hand", "Right Hand", "Left Leg", "Right Leg",
+           "Left Foot", "Right Foot", "Groin / Genital", "Buttocks"],
+    "vn": ["Đầu / Mặt", "Cổ", "Ngực", "Bụng",
+           "Lưng trên", "Lưng dưới", "Tay trái", "Tay phải",
+           "Bàn tay trái", "Bàn tay phải", "Chân trái", "Chân phải",
+           "Bàn chân trái", "Bàn chân phải", "Bẹn / Sinh dục", "Mông"],
+    "zh": ["头部 / 面部", "颈部", "胸部", "腹部",
+           "上背部", "下背部", "左臂", "右臂",
+           "左手", "右手", "左腿", "右腿",
+           "左脚", "右脚", "腹股沟 / 生殖器", "臀部"],
+    "es": ["Cabeza / Cara", "Cuello", "Pecho", "Abdomen",
+           "Espalda alta", "Espalda baja", "Brazo izquierdo", "Brazo derecho",
+           "Mano izquierda", "Mano derecha", "Pierna izquierda", "Pierna derecha",
+           "Pie izquierdo", "Pie derecho", "Ingle / Genitales", "Nalgas"],
+    "fr": ["Tête / Visage", "Cou", "Poitrine", "Abdomen",
+           "Haut du dos", "Bas du dos", "Bras gauche", "Bras droit",
+           "Main gauche", "Main droite", "Jambe gauche", "Jambe droite",
+           "Pied gauche", "Pied droit", "Aine / Organes génitaux", "Fesses"],
+    "ja": ["頭部 / 顔", "首", "胸部", "腹部",
+           "上背部", "下背部", "左腕", "右腕",
+           "左手", "右手", "左脚", "右脚",
+           "左足", "右足", "鼠径部 / 性器", "臀部"],
+}
+
+
+def _localized_regions(lang: str) -> list:
+    return _REGION_TRANSLATIONS.get(lang, _REGION_TRANSLATIONS["en"])
+
+
+def _display_to_en(display: str) -> str:
+    """Map any localized display name (any lang) back to the English region key."""
+    if display in _BODY_REGIONS:
+        return display
+    for translations in _REGION_TRANSLATIONS.values():
+        if display in translations:
+            return _BODY_REGIONS[translations.index(display)]
+    return ""
+
+
 # Each region maps to one or more SVG shape IDs that should highlight
 _REGION_SHAPE_MAP = {
     "Head / Face":      ["svg-head"],
@@ -441,39 +484,47 @@ def _error_html(t: dict, exc: Exception) -> str:
     )
 
 
-def _ui_updates(lang_choice: str):
+def _ui_updates(lang_choice: str, current_regions=None):
     """Return gr.update() for the 4 translatable input-area components (no output_html)."""
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
+    new_choices = _localized_regions(lang)
+    # Translate current selection into new language
+    translated = []
+    for r in (current_regions or []):
+        en = _display_to_en(r)
+        if en in _BODY_REGIONS:
+            translated.append(new_choices[_BODY_REGIONS.index(en)])
     return (
         gr.update(label=t["img_label"]),
         gr.update(label=t["symptoms_label"], placeholder=t["symptoms_placeholder"]),
         gr.update(value=t["analyze_btn"]),
-        gr.update(label=t["region_label"]),
+        gr.update(label=t["region_label"], choices=new_choices, value=translated),
     )
 
 
 def _regions_to_prompt(selected) -> str:
-    """Convert list (or single string) selection to prompt string."""
+    """Convert list of display names (any lang) to English prompt string."""
     if not selected:
         return ""
     if isinstance(selected, str):
         selected = [selected]
-    valid = [r for r in selected if r in _BODY_REGIONS]
-    return ", ".join(valid)
+    en_regions = [_display_to_en(r) for r in selected]
+    return ", ".join(r for r in en_regions if r)
 
 
 def on_region_change(selected):
-    """Re-render the body map SVG when selection changes."""
+    """Re-render the body map SVG when selection changes (map display→EN first)."""
     if isinstance(selected, str):
-        selected = [selected] if selected in _BODY_REGIONS else []
-    return _body_map_svg(selected or [])
+        selected = [selected]
+    en_keys = [_display_to_en(r) for r in (selected or [])]
+    return _body_map_svg(en_keys)
 
 
 def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
-    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_choice)
+    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_choice, current_regions=selected_regions)
 
     region = _regions_to_prompt(selected_regions)
 
@@ -494,7 +545,7 @@ def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_display)
+    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_display, current_regions=[])
     lang = _LANG_MAP.get(lang_display, "en")
     return lang_display, img_upd, sym_upd, btn_upd, region_upd, _body_map_svg([]), _empty_output_html(lang), get_backend_status_html(lang)
 
