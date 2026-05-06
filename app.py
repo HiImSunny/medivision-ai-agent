@@ -382,6 +382,16 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
     gr.HTML(HEADER_HTML)
 
+    # ── Global language selector ──────────────────────────────────────────────
+    with gr.Row():
+        with gr.Column(scale=0, min_width=220):
+            lang_radio = gr.Dropdown(
+                choices=["English", "Tiếng Việt", "中文", "Español", "Français", "日本語"],
+                value="English",
+                label="🌐 Language",
+                container=True,
+            )
+
     # Connection status bar — auto-populated on load, refreshed after each analysis
     status_bar = gr.HTML(value="<div style='height:36px;'></div>")
 
@@ -401,11 +411,6 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                     "Mô tả triệu chứng — ví dụ: vết đỏ ngứa 3 ngày, hơi rát..."
                 ),
                 lines=4,
-            )
-            lang_radio = gr.Dropdown(
-                choices=["English", "Tiếng Việt", "中文", "Español", "Français", "日本語"],
-                value="English",
-                label="Language / Ngôn ngữ",
             )
             submit_btn = gr.Button(
                 "🔬  Analyze  /  Phân tích",

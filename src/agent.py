@@ -23,10 +23,14 @@ def _build_prompt(image_path: str | None, text_description: str, lang: str) -> s
         "The user has provided"
         + (" an image of a skin condition and" if has_image else "")
         + f" the following symptom description:\n\n{text_description}\n\n"
-        "Provide a JSON object with these exact keys:\n"
-        "  diagnosis, severity (Low|Medium|High|Urgent), "
-        "recommended_actions (list of strings), confidence_score (integer 0-100).\n"
-        "Be medically thorough but write at a patient-friendly reading level."
+        "Analyze the above and respond with a single JSON object using these exact keys:\n"
+        "  \"diagnosis\": a concise clinical condition name (e.g. 'Contact Dermatitis', "
+        "'Superficial Laceration', 'Cellulitis') — NOT a restatement of the patient's "
+        "symptoms. Use the standard medical term, translated into the response language.\n"
+        "  \"severity\": one of Low | Medium | High | Urgent\n"
+        "  \"recommended_actions\": list of 3-5 actionable strings\n"
+        "  \"confidence_score\": integer 0-100\n"
+        "Return only the JSON object, no extra text."
     )
 
 
