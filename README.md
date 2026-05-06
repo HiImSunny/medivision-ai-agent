@@ -18,7 +18,7 @@ license: mit
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Powered by AMD](https://img.shields.io/badge/Powered%20by-AMD%20MI300X%20%2B%20ROCm-ED1C24)](https://www.amd.com/en/products/accelerators/instinct/mi300.html)
 
-MediVision is a bilingual (English / Vietnamese) multimodal AI assistant that analyzes skin wound and disease images combined with patient symptom descriptions. Inference is served by a **vLLM server running on AMD Developer Cloud** (AMD Instinct™ MI300X + ROCm), and the lightweight Gradio frontend on Hugging Face Spaces simply calls that API — no model weights are loaded in the Space itself.
+MediVision is a **multilingual** multimodal AI assistant that analyzes skin wound and disease images combined with patient symptom descriptions. It supports **English, Tiếng Việt, 中文, Español, Français, and 日本語** — every output (diagnosis, severity, actions, disclaimer) is delivered natively in the selected language. Inference is served by a **vLLM server running on AMD Developer Cloud** (AMD Instinct™ MI300X + ROCm), and the lightweight Gradio frontend on Hugging Face Spaces simply calls that API — no model weights are loaded in the Space itself.
 
 ---
 
@@ -52,14 +52,13 @@ on the AMD GPU server.
 ## Features
 
 - **Multimodal Analysis** — Combines skin image + freeform symptom text for richer diagnosis suggestions.
-- **Bilingual** — Full English and Vietnamese (Tiếng Việt) support.
+- **Multilingual** — Full support for 6 languages: English, Tiếng Việt, 中文 (Chinese), Español, Français, and 日本語 (Japanese). All output — diagnosis, severity, recommendations, and disclaimer — is rendered natively in the selected language.
 - **Structured Output** — Every analysis returns:
   - Diagnosis suggestion
   - Severity badge: `Low` · `Medium` · `High` · `Urgent`
   - Actionable recommended steps (clinical-grade language)
   - Confidence score with visual progress bar
 - **AMD MI300X Powered** — Inference via vLLM on AMD Instinct™ MI300X + ROCm.
-- **Graceful Mock Mode** — Falls back to realistic mock responses if the vLLM server is unreachable, so the demo always runs.
 - **HF Space Ready** — Minimal dependencies; no GPU required in the Space.
 
 ---
@@ -86,8 +85,8 @@ on the AMD GPU server.
 | Inference Runtime | **vLLM** (OpenAI-compatible API) |
 | Inference Hardware | **AMD Instinct™ MI300X** (192 GB HBM3) + ROCm |
 | Inference Host | AMD Developer Cloud |
-| Frontend | Gradio 4 (Hugging Face Space — CPU) |
-| Language Support | English / Tiếng Việt |
+| Frontend | Gradio 5.29 (Hugging Face Space — CPU) |
+| Language Support | English · Tiếng Việt · 中文 · Español · Français · 日本語 |
 
 ---
 
@@ -155,12 +154,6 @@ python app.py
 
 The app is available at `http://localhost:7860`.
 
-### 5. Force mock mode (no vLLM server required)
-
-```bash
-MOCK_MODE=true python app.py
-```
-
 ---
 
 ## Starting the vLLM Server (AMD Developer Cloud)
@@ -188,7 +181,7 @@ The server exposes an OpenAI-compatible API at `http://<VM_IP>:8000/v1`.
 | `VLLM_API_URL` | `http://localhost:8000` | Base URL of the vLLM server |
 | `MODEL_NAME` | `Qwen/Qwen2.5-VL-7B-Instruct` | Model ID served by vLLM |
 | `VLLM_API_KEY` | `not-required` | API key (if vLLM auth is enabled) |
-| `MOCK_MODE` | `false` | Force mock mode (skip vLLM calls) |
+
 | `MAX_NEW_TOKENS` | `512` | Max tokens to generate |
 | `TEMPERATURE` | `0.2` | Sampling temperature |
 

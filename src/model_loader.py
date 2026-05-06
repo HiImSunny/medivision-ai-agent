@@ -36,10 +36,6 @@ def check_connection() -> tuple[bool, str]:
     Ping the vLLM server's /v1/models endpoint.
     Returns (is_connected: bool, status_message: str).
     """
-    if config.MOCK_MODE:
-        print("[Connection] MOCK_MODE=true — skipping connection check.")
-        return False, "Mock mode enabled"
-
     import requests as req
 
     url = f"{config.VLLM_API_URL}/v1/models"
@@ -58,21 +54,18 @@ def check_connection() -> tuple[bool, str]:
         print(f"[Connection] FAILED — ConnectionError: {exc}")
         return False, f"ConnectionError: {exc}"
     except req.exceptions.Timeout:
-        print(f"[Connection] FAILED — Timeout after 5s (server may be down or IP wrong)")
+        print(f"[Connection] FAILED — Timeout after 5s")
         return False, "Timeout (5s)"
     except Exception as exc:
-        print(f"[Connection] FAILED — Unexpected error: {type(exc).__name__}: {exc}")
+        print(f"[Connection] FAILED — {type(exc).__name__}: {exc}")
         return False, f"{type(exc).__name__}: {exc}"
 
 
-def generate_response(prompt: str, image_path: str = None) -> str | None:
+def generate_response(prompt: str, image_path: str = None) -> str:
     """
     Send a request to the vLLM endpoint and return the model's text output.
-    Returns None on failure so callers fall back to mock logic.
+    Raises RuntimeError if the backend is unreachable or returns an error.
     """
-    if config.MOCK_MODE:
-        return None
-
     try:
         client = _get_client()
 
@@ -84,9 +77,7 @@ def generate_response(prompt: str, image_path: str = None) -> str | None:
                     "content": [
                         {
                             "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime};base64,{b64}",
-                            },
+                            "image_url": {"url": f"data:{mime};base64,{b64}"},
                         },
                         {"type": "text", "text": prompt},
                     ],
@@ -104,6 +95,4 @@ def generate_response(prompt: str, image_path: str = None) -> str | None:
         return response.choices[0].message.content
 
     except Exception as exc:
-        print(f"[ModelLoader] vLLM call failed ({exc}). Falling back to mock mode.")
-        config.MOCK_MODE = True
-        return None
+        raise RuntimeError(f"AMD Cloud backend unreachable: {exc}") from exc
