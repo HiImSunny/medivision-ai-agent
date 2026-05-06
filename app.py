@@ -241,33 +241,60 @@ _BODY_REGIONS = [
     "Left Foot", "Right Foot", "Groin / Genital", "Buttocks",
 ]
 
-BODY_MAP_SVG = """
+# Each region maps to one or more SVG shape IDs that should highlight
+_REGION_SHAPE_MAP = {
+    "Head / Face":      ["svg-head"],
+    "Neck":             ["svg-neck"],
+    "Chest":            ["svg-chest"],
+    "Abdomen":          ["svg-abdomen"],
+    "Upper Back":       ["svg-upper-back"],
+    "Lower Back":       ["svg-lower-back"],
+    "Left Arm":         ["svg-left-arm"],
+    "Right Arm":        ["svg-right-arm"],
+    "Left Hand":        ["svg-left-hand"],
+    "Right Hand":       ["svg-right-hand"],
+    "Left Leg":         ["svg-left-leg"],
+    "Right Leg":        ["svg-right-leg"],
+    "Left Foot":        ["svg-left-foot"],
+    "Right Foot":       ["svg-right-foot"],
+    "Groin / Genital":  ["svg-groin"],
+    "Buttocks":         ["svg-buttocks"],
+}
+
+_DIM   = "#374151"   # default fill
+_HI    = "#ED1C24"   # highlighted fill
+
+
+def _body_map_svg(selected: list) -> str:
+    active = set()
+    for r in (selected or []):
+        for sid in _REGION_SHAPE_MAP.get(r, []):
+            active.add(sid)
+
+    def f(sid):
+        return _HI if sid in active else _DIM
+
+    return f"""
 <div style='display:flex; flex-direction:column; align-items:center; gap:4px;
             padding:8px 0; user-select:none;'>
   <svg viewBox="0 0 80 180" width="72" height="162"
-       xmlns="http://www.w3.org/2000/svg" style="opacity:0.55;">
-    <!-- head -->
-    <ellipse cx="40" cy="14" rx="11" ry="13" fill="#4b5563"/>
-    <!-- neck -->
-    <rect x="35" y="26" width="10" height="8" rx="2" fill="#4b5563"/>
-    <!-- torso -->
-    <rect x="22" y="34" width="36" height="44" rx="5" fill="#374151"/>
-    <!-- left arm -->
-    <rect x="8"  y="34" width="12" height="36" rx="5" fill="#4b5563"/>
-    <!-- right arm -->
-    <rect x="60" y="34" width="12" height="36" rx="5" fill="#4b5563"/>
-    <!-- left hand -->
-    <ellipse cx="14" cy="78" rx="7" ry="5" fill="#4b5563"/>
-    <!-- right hand -->
-    <ellipse cx="66" cy="78" rx="7" ry="5" fill="#4b5563"/>
-    <!-- left leg -->
-    <rect x="23" y="80" width="14" height="54" rx="5" fill="#4b5563"/>
-    <!-- right leg -->
-    <rect x="43" y="80" width="14" height="54" rx="5" fill="#4b5563"/>
-    <!-- left foot -->
-    <ellipse cx="30" cy="140" rx="9" ry="5" fill="#4b5563"/>
-    <!-- right foot -->
-    <ellipse cx="50" cy="140" rx="9" ry="5" fill="#4b5563"/>
+       xmlns="http://www.w3.org/2000/svg">
+    <ellipse id="svg-head"        cx="40" cy="13"  rx="11" ry="12"           fill="{f('svg-head')}"/>
+    <rect    id="svg-neck"        x="35"  y="24"   width="10" height="8"  rx="2" fill="{f('svg-neck')}"/>
+    <rect    id="svg-chest"       x="22"  y="32"   width="36" height="22" rx="4" fill="{f('svg-chest')}"/>
+    <rect    id="svg-abdomen"     x="22"  y="55"   width="36" height="20" rx="4" fill="{f('svg-abdomen')}"/>
+    <rect    id="svg-upper-back"  x="22"  y="32"   width="36" height="22" rx="4" fill="{'#c0392b' if 'svg-upper-back' in active else 'none'}" opacity="0.5"/>
+    <rect    id="svg-lower-back"  x="22"  y="55"   width="36" height="20" rx="4" fill="{'#c0392b' if 'svg-lower-back' in active else 'none'}" opacity="0.5"/>
+    <rect    id="svg-left-arm"    x="7"   y="32"   width="13" height="38" rx="5" fill="{f('svg-left-arm')}"/>
+    <rect    id="svg-right-arm"   x="60"  y="32"   width="13" height="38" rx="5" fill="{f('svg-right-arm')}"/>
+    <ellipse id="svg-left-hand"   cx="13" cy="76"  rx="7"  ry="5"             fill="{f('svg-left-hand')}"/>
+    <ellipse id="svg-right-hand"  cx="67" cy="76"  rx="7"  ry="5"             fill="{f('svg-right-hand')}"/>
+    <rect    id="svg-groin"       x="27"  y="76"   width="26" height="8"  rx="3" fill="{f('svg-groin')}"/>
+    <rect    id="svg-buttocks"    x="27"  y="76"   width="26" height="8"  rx="3" fill="{'#c0392b' if 'svg-buttocks' in active else 'none'}" opacity="0.6"/>
+    <rect    id="svg-left-leg"    x="22"  y="85"   width="15" height="52" rx="5" fill="{f('svg-left-leg')}"/>
+    <rect    id="svg-right-leg"   x="43"  y="85"   width="15" height="52" rx="5" fill="{f('svg-right-leg')}"/>
+    <ellipse id="svg-left-foot"   cx="29" cy="142" rx="10" ry="5"             fill="{f('svg-left-foot')}"/>
+    <ellipse id="svg-right-foot"  cx="51" cy="142" rx="10" ry="5"             fill="{f('svg-right-foot')}"/>
   </svg>
   <div style='font-size:0.6rem; color:#4b5563; font-family:monospace;'>anatomical map</div>
 </div>
@@ -418,28 +445,37 @@ def _ui_updates(lang_choice: str):
     """Return gr.update() for the 4 translatable input-area components (no output_html)."""
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
-    region_choices = [t["region_none"]] + _BODY_REGIONS
     return (
         gr.update(label=t["img_label"]),
         gr.update(label=t["symptoms_label"], placeholder=t["symptoms_placeholder"]),
         gr.update(value=t["analyze_btn"]),
-        gr.update(label=t["region_label"], choices=region_choices, value=t["region_none"]),
+        gr.update(label=t["region_label"]),
     )
 
 
-def on_lang_change(lang_choice: str, image, symptoms: str, region_display: str):
-    """
-    Language switch handler.
-    - Always updates UI labels.
-    - If there is existing content (image or symptoms), re-runs analysis in the new language.
-    - If no content, shows the translated empty placeholder.
-    """
+def _regions_to_prompt(selected) -> str:
+    """Convert list (or single string) selection to prompt string."""
+    if not selected:
+        return ""
+    if isinstance(selected, str):
+        selected = [selected]
+    valid = [r for r in selected if r in _BODY_REGIONS]
+    return ", ".join(valid)
+
+
+def on_region_change(selected):
+    """Re-render the body map SVG when selection changes."""
+    if isinstance(selected, str):
+        selected = [selected] if selected in _BODY_REGIONS else []
+    return _body_map_svg(selected or [])
+
+
+def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
     img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_choice)
 
-    # region_display may be the old lang's "Not specified" — treat those as no region
-    region = region_display if region_display in _BODY_REGIONS else ""
+    region = _regions_to_prompt(selected_regions)
 
     has_content = bool(image) or bool(symptoms and symptoms.strip())
     if has_content:
@@ -460,21 +496,21 @@ def on_load(request: gr.Request):
     )
     img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_display)
     lang = _LANG_MAP.get(lang_display, "en")
-    return lang_display, img_upd, sym_upd, btn_upd, region_upd, _empty_output_html(lang), get_backend_status_html(lang)
+    return lang_display, img_upd, sym_upd, btn_upd, region_upd, _body_map_svg([]), _empty_output_html(lang), get_backend_status_html(lang)
 
 
 # ---------------------------------------------------------------------------
 # Predict
 # ---------------------------------------------------------------------------
 
-def predict(image, symptoms: str, lang_choice: str, region_display: str):
+def predict(image, symptoms: str, lang_choice: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
 
     if not image and not symptoms.strip():
         return _empty_output_html(lang), get_backend_status_html(lang)
 
-    region = region_display if region_display in _BODY_REGIONS else ""
+    region = _regions_to_prompt(selected_regions)
 
     try:
         result = get_pipeline().process(image, symptoms.strip(), lang=lang, region=region)
@@ -614,11 +650,12 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
             with gr.Row(equal_height=True):
                 with gr.Column(scale=0, min_width=80):
-                    gr.HTML(BODY_MAP_SVG)
+                    body_map_html = gr.HTML(value=_body_map_svg([]))
                 with gr.Column(scale=1):
                     region_selector = gr.Dropdown(
-                        choices=["Not specified"] + _BODY_REGIONS,
-                        value="Not specified",
+                        choices=_BODY_REGIONS,
+                        value=[],
+                        multiselect=True,
                         label="Affected Body Region",
                         container=True,
                     )
@@ -647,6 +684,12 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
     # ── Events ───────────────────────────────────────────────────────────────
 
+    region_selector.change(
+        fn=on_region_change,
+        inputs=[region_selector],
+        outputs=[body_map_html],
+    )
+
     lang_radio.change(
         fn=on_lang_change,
         inputs=[lang_radio, input_img, symptoms_txt, region_selector],
@@ -663,7 +706,7 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
     demo.load(
         fn=on_load,
         inputs=[],
-        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, output_html, status_bar],
+        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, body_map_html, output_html, status_bar],
     )
 
     gr.HTML(FOOTER_HTML)
