@@ -21,32 +21,17 @@ def get_pipeline() -> MediVisionPipeline:
 # ---------------------------------------------------------------------------
 
 def get_backend_status_html() -> str:
-    connected, msg = check_connection()
+    connected, _ = check_connection()
     if connected:
-        return (
-            "<div style='display:flex; align-items:center; justify-content:center; "
-            "gap:8px; padding:8px 16px; margin:0 auto 4px; max-width:640px; "
-            "background:#052e16; border:1px solid #16a34a; border-radius:8px;'>"
-            "  <span style='width:9px; height:9px; border-radius:50%; "
-            "background:#22c55e; display:inline-block; flex-shrink:0; "
-            "box-shadow:0 0 6px #22c55e;'></span>"
-            "  <span style='font-size:0.78rem; color:#86efac; font-family:monospace;'>"
-            f"AMD Developer Cloud connected &nbsp;·&nbsp; Qwen2.5-VL-7B-Instruct &nbsp;·&nbsp; {config.VLLM_API_URL}"
-            "  </span>"
-            "</div>"
-        )
+        dot, label, color = "#22c55e", "AMD Cloud · Live", "#86efac"
     else:
-        return (
-            "<div style='display:flex; align-items:center; justify-content:center; "
-            "gap:8px; padding:8px 16px; margin:0 auto 4px; max-width:640px; "
-            "background:#1c0a00; border:1px solid #c2410c; border-radius:8px;'>"
-            "  <span style='width:9px; height:9px; border-radius:50%; "
-            "background:#f97316; display:inline-block; flex-shrink:0;'></span>"
-            "  <span style='font-size:0.78rem; color:#fdba74; font-family:monospace;'>"
-            f"Demo mode &nbsp;·&nbsp; AMD Cloud unreachable &nbsp;·&nbsp; {msg}"
-            "  </span>"
-            "</div>"
-        )
+        dot, label, color = "#f97316", "Demo Mode", "#fdba74"
+    return (
+        f"<div style='text-align:center; margin-bottom:4px;'>"
+        f"<span style='font-size:0.75rem; color:{color}; font-family:monospace;'>"
+        f"<span style='color:{dot};'>●</span> {label}"
+        f"</span></div>"
+    )
 
 
 # ---------------------------------------------------------------------------
