@@ -571,6 +571,90 @@ def predict(image, symptoms: str, lang_choice: str, selected_regions):
 
 
 # ---------------------------------------------------------------------------
+# Benchmark
+# ---------------------------------------------------------------------------
+
+_BENCH_PROMPTS = [
+    "Describe a mild skin rash.",
+    "What is contact dermatitis?",
+    "Signs of superficial wound infection?",
+    "Describe eczema symptoms briefly.",
+    "What causes tinea corporis?",
+]
+
+
+def run_benchmark(n_runs: int):
+    import time as _time
+    from src.model_loader import generate_response as _gen
+
+    n_runs = int(n_runs)
+    rows = []
+    latencies = []
+    throughputs = []
+
+    for i in range(n_runs):
+        prompt = _BENCH_PROMPTS[i % len(_BENCH_PROMPTS)]
+        try:
+            _, metrics = _gen(prompt)
+            lat = metrics.get("latency_ms", 0)
+            tps = metrics.get("tokens_per_sec", 0)
+            tok = metrics.get("total_tokens", 0)
+            latencies.append(lat)
+            throughputs.append(tps)
+            status = "✓"
+            rows.append((i + 1, lat, tps, tok, status))
+        except Exception as exc:
+            rows.append((i + 1, "—", "—", "—", f"✗ {str(exc)[:40]}"))
+
+    # Build table
+    header = (
+        "<tr style='border-bottom:1px solid #374151;'>"
+        "<th style='padding:6px 12px; text-align:left; color:#6b7280; font-weight:500;'>#</th>"
+        "<th style='padding:6px 12px; text-align:right; color:#6b7280; font-weight:500;'>Latency (ms)</th>"
+        "<th style='padding:6px 12px; text-align:right; color:#6b7280; font-weight:500;'>Throughput (tok/s)</th>"
+        "<th style='padding:6px 12px; text-align:right; color:#6b7280; font-weight:500;'>Total tokens</th>"
+        "<th style='padding:6px 12px; text-align:center; color:#6b7280; font-weight:500;'>Status</th>"
+        "</tr>"
+    )
+    body = ""
+    for run_i, lat, tps, tok, status in rows:
+        body += (
+            f"<tr style='border-bottom:1px solid #1f2937;'>"
+            f"<td style='padding:5px 12px; color:#9ca3af;'>{run_i}</td>"
+            f"<td style='padding:5px 12px; text-align:right; color:#d1d5db;'>{lat:,}" + (" ms" if isinstance(lat, int) else "") + "</td>"
+            f"<td style='padding:5px 12px; text-align:right; color:#d1d5db;'>{tps}</td>"
+            f"<td style='padding:5px 12px; text-align:right; color:#d1d5db;'>{tok}</td>"
+            f"<td style='padding:5px 12px; text-align:center; color:#6b7280; font-size:0.85rem;'>{status}</td>"
+            f"</tr>"
+        )
+
+    summary = ""
+    if latencies:
+        avg_lat = round(sum(latencies) / len(latencies))
+        avg_tps = round(sum(throughputs) / len(throughputs), 1)
+        min_lat = min(latencies)
+        max_lat = max(latencies)
+        summary = (
+            f"<div style='display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; "
+            f"padding:10px 14px; background:#1f2937; border-radius:8px;'>"
+            f"<span style='font-size:0.78rem; color:#6b7280;'>Avg latency: <b style='color:#9ca3af;'>{avg_lat} ms</b></span>"
+            f"<span style='font-size:0.78rem; color:#6b7280;'>Min: <b style='color:#9ca3af;'>{min_lat} ms</b></span>"
+            f"<span style='font-size:0.78rem; color:#6b7280;'>Max: <b style='color:#9ca3af;'>{max_lat} ms</b></span>"
+            f"<span style='font-size:0.78rem; color:#6b7280;'>Avg throughput: <b style='color:#9ca3af;'>{avg_tps} tok/s</b></span>"
+            f"<span style='font-size:0.78rem; color:#6b7280;'>Runs: <b style='color:#9ca3af;'>{len(latencies)}/{n_runs}</b></span>"
+            f"</div>"
+        )
+
+    return (
+        f"<div style='font-family:monospace;'>"
+        f"<table style='width:100%; border-collapse:collapse; font-size:0.82rem;'>{header}{body}</table>"
+        f"{summary}"
+        f"<div style='font-size:0.68rem; color:#374151; margin-top:8px;'>AMD Instinct™ MI300X · ROCm · vLLM</div>"
+        f"</div>"
+    )
+
+
+# ---------------------------------------------------------------------------
 # CSS
 # ---------------------------------------------------------------------------
 
@@ -623,6 +707,21 @@ footer { display: none !important; }
 #topbar > div { width: 100% !important; }
 #lang-col { min-width: 180px !important; max-width: 200px !important; }
 #lang-col label span { text-transform: none !important; font-size: 0.78rem !important; }
+
+/* ── Tabs: muted style, benchmark tab clearly secondary ─────────── */
+#main-tabs > .tab-nav { border-bottom: 1px solid #1f2937 !important; }
+#main-tabs > .tab-nav button {
+    font-size: 0.82rem !important;
+    color: #6b7280 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 8px 16px !important;
+}
+#main-tabs > .tab-nav button.selected {
+    color: #f9fafb !important;
+    border-bottom: 2px solid #ED1C24 !important;
+}
+#bench-tab { opacity: 0.9; }
 """
 
 # ---------------------------------------------------------------------------
@@ -684,8 +783,12 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 show_label=False,
             )
 
-    # ── Main content ──────────────────────────────────────────────────────────
-    with gr.Row(equal_height=False):
+    with gr.Tabs(elem_id="main-tabs"):
+
+      with gr.TabItem("Analysis"):
+
+        # ── Main content ──────────────────────────────────────────────────────────
+        with gr.Row(equal_height=False):
 
         with gr.Column(scale=1, min_width=300):
             input_img = gr.Image(
@@ -733,6 +836,19 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 label="Analysis Result",
             )
 
+      # ── Benchmark tab ─────────────────────────────────────────────────────
+      with gr.TabItem("⚙ AMD Benchmark", elem_id="bench-tab"):
+        gr.HTML("""
+<div style='color:#6b7280; font-size:0.8rem; padding:8px 0 12px;'>
+  Runs a series of short inference requests against the AMD Cloud backend and
+  measures latency and throughput. Results reflect live MI300X + ROCm performance.
+</div>""")
+        with gr.Row():
+            bench_runs = gr.Slider(minimum=3, maximum=10, value=5, step=1,
+                                   label="Number of runs", scale=2)
+            bench_btn  = gr.Button("▶  Run Benchmark", variant="secondary", scale=1)
+        bench_out = gr.HTML(value="<div style='color:#4b5563; font-size:0.8rem; padding:16px 0;'>Click Run Benchmark to start.</div>")
+
     # ── Events ───────────────────────────────────────────────────────────────
 
     region_selector.change(
@@ -758,6 +874,12 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
         fn=on_load,
         inputs=[],
         outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, body_map_html, output_html, status_bar],
+    )
+
+    bench_btn.click(
+        fn=run_benchmark,
+        inputs=[bench_runs],
+        outputs=[bench_out],
     )
 
     gr.HTML(FOOTER_HTML)
