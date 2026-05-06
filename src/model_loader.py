@@ -37,17 +37,32 @@ def check_connection() -> tuple[bool, str]:
     Returns (is_connected: bool, status_message: str).
     """
     if config.MOCK_MODE:
+        print("[Connection] MOCK_MODE=true — skipping connection check.")
         return False, "Mock mode enabled"
+
+    import requests as req
+
+    url = f"{config.VLLM_API_URL}/v1/models"
+    api_key = os.environ.get("VLLM_API_KEY", "not-required")
+    print(f"[Connection] Checking AMD Cloud at {url} ...")
+
     try:
-        import requests as req
-        url = f"{config.VLLM_API_URL}/v1/models"
-        api_key = os.environ.get("VLLM_API_KEY", "not-required")
         r = req.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=5)
         if r.status_code == 200:
+            models = [m.get("id", "?") for m in r.json().get("data", [])]
+            print(f"[Connection] OK — models available: {models}")
             return True, f"Connected · {config.VLLM_API_URL}"
-        return False, f"Server returned HTTP {r.status_code}"
+        print(f"[Connection] FAILED — HTTP {r.status_code}: {r.text[:200]}")
+        return False, f"HTTP {r.status_code}"
+    except req.exceptions.ConnectionError as exc:
+        print(f"[Connection] FAILED — ConnectionError: {exc}")
+        return False, f"ConnectionError: {exc}"
+    except req.exceptions.Timeout:
+        print(f"[Connection] FAILED — Timeout after 5s (server may be down or IP wrong)")
+        return False, "Timeout (5s)"
     except Exception as exc:
-        return False, f"Unreachable: {exc}"
+        print(f"[Connection] FAILED — Unexpected error: {type(exc).__name__}: {exc}")
+        return False, f"{type(exc).__name__}: {exc}"
 
 
 def generate_response(prompt: str, image_path: str = None) -> str | None:
