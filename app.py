@@ -49,6 +49,9 @@ _I18N = {
         "error_title":            "Backend Unavailable",
         "error_body":             "AMD Cloud backend is unreachable. Please try again later.",
         "examples_label":         "Quick Examples",
+        "metrics_latency":        "Latency",
+        "metrics_throughput":     "Throughput",
+        "metrics_tokens":         "tokens",
     },
     "vn": {
         "img_label":              "Tải lên hình ảnh y tế",
@@ -68,6 +71,9 @@ _I18N = {
         "error_title":            "Hệ thống không khả dụng",
         "error_body":             "Không thể kết nối AMD Cloud. Vui lòng thử lại sau.",
         "examples_label":         "Ví dụ nhanh",
+        "metrics_latency":        "Độ trễ",
+        "metrics_throughput":     "Thông lượng",
+        "metrics_tokens":         "token",
     },
     "zh": {
         "img_label":              "上传医学图像",
@@ -87,6 +93,9 @@ _I18N = {
         "error_title":            "后端不可用",
         "error_body":             "AMD Cloud 后端无法访问，请稍后重试。",
         "examples_label":         "快速示例",
+        "metrics_latency":        "延迟",
+        "metrics_throughput":     "吞吐量",
+        "metrics_tokens":         "tokens",
     },
     "es": {
         "img_label":              "Subir imagen médica",
@@ -106,6 +115,9 @@ _I18N = {
         "error_title":            "Backend no disponible",
         "error_body":             "El backend de AMD Cloud no está disponible. Por favor, inténtelo más tarde.",
         "examples_label":         "Ejemplos rápidos",
+        "metrics_latency":        "Latencia",
+        "metrics_throughput":     "Rendimiento",
+        "metrics_tokens":         "tokens",
     },
     "fr": {
         "img_label":              "Télécharger une image médicale",
@@ -125,6 +137,9 @@ _I18N = {
         "error_title":            "Backend indisponible",
         "error_body":             "Le backend AMD Cloud est inaccessible. Veuillez réessayer plus tard.",
         "examples_label":         "Exemples rapides",
+        "metrics_latency":        "Latence",
+        "metrics_throughput":     "Débit",
+        "metrics_tokens":         "tokens",
     },
     "ja": {
         "img_label":              "医療画像をアップロード",
@@ -144,6 +159,9 @@ _I18N = {
         "error_title":            "バックエンド利用不可",
         "error_body":             "AMD Cloudバックエンドに接続できません。後でもう一度お試しください。",
         "examples_label":         "クイック例",
+        "metrics_latency":        "レイテンシ",
+        "metrics_throughput":     "スループット",
+        "metrics_tokens":         "トークン",
     },
 }
 
@@ -208,6 +226,41 @@ def _severity_badge(severity: str) -> str:
     )
 
 
+def _metrics_bar(metrics: dict, t: dict) -> str:
+    latency_ms   = metrics.get("latency_ms", 0)
+    tok_per_sec  = metrics.get("tokens_per_sec", 0)
+    total_tokens = metrics.get("total_tokens", 0)
+
+    def _chip(label: str, value: str) -> str:
+        return (
+            f"<span style='display:inline-flex; flex-direction:column; align-items:center; "
+            f"background:#0f172a; border:1px solid #374151; border-radius:8px; "
+            f"padding:6px 14px; min-width:80px;'>"
+            f"<span style='font-size:1rem; font-weight:700; color:#ED1C24;'>{value}</span>"
+            f"<span style='font-size:0.65rem; color:#6b7280; text-transform:uppercase; "
+            f"letter-spacing:.05em; margin-top:2px;'>{label}</span>"
+            f"</span>"
+        )
+
+    latency_val  = f"{latency_ms:,} ms" if latency_ms else "—"
+    throughput_val = f"{tok_per_sec} {t['metrics_tokens']}/s" if tok_per_sec else "—"
+    tokens_val   = f"{total_tokens:,} {t['metrics_tokens']}" if total_tokens else "—"
+
+    return (
+        f"<div style='display:flex; gap:8px; flex-wrap:wrap; align-items:center; "
+        f"justify-content:space-between; background:#1f2937; border-radius:8px; "
+        f"padding:10px 14px; margin-bottom:12px;'>"
+        f"<div style='font-size:0.68rem; color:#6b7280; font-family:monospace; "
+        f"white-space:nowrap;'>⚡ AMD MI300X · ROCm · vLLM</div>"
+        f"<div style='display:flex; gap:8px; flex-wrap:wrap;'>"
+        f"{_chip(t['metrics_latency'], latency_val)}"
+        f"{_chip(t['metrics_throughput'], throughput_val)}"
+        f"{_chip(t['metrics_tokens'], tokens_val)}"
+        f"</div>"
+        f"</div>"
+    )
+
+
 def _confidence_bar(score: int, label: str) -> str:
     if score == 0:
         return ""
@@ -240,6 +293,7 @@ def _build_result_html(result: dict, lang: str) -> str:
     sev        = _SEVERITY_TRANSLATE.get(lang, _SEVERITY_TRANSLATE["en"]).get(sev_en, sev_en)
     actions    = result.get("recommended_actions", [])
     score      = result.get("confidence_score", 0)
+    metrics    = result.get("_metrics", {})
 
     actions_html = "".join(
         f"<li style='margin:5px 0; color:#d1d5db;'>{a}</li>" for a in actions
@@ -255,7 +309,7 @@ def _build_result_html(result: dict, lang: str) -> str:
 <div style='background:#111827; border:1px solid #ED1C24; border-radius:12px;
             padding:20px; font-family:Arial,sans-serif; color:#f9fafb;'>
 
-  <div style='display:flex; align-items:center; gap:10px; margin-bottom:16px;'>
+  <div style='display:flex; align-items:center; gap:10px; margin-bottom:12px;'>
     <div style='background:#ED1C24; width:4px; border-radius:2px; height:36px;'></div>
     <div>
       <div style='font-size:1.1rem; font-weight:700; color:#ED1C24;'>
@@ -264,6 +318,8 @@ def _build_result_html(result: dict, lang: str) -> str:
       <div style='font-size:0.75rem; color:#6b7280;'>AMD MI300X · ROCm · Qwen2.5-VL-7B</div>
     </div>
   </div>
+
+  {_metrics_bar(metrics, t)}
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
     <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;

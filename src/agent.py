@@ -63,8 +63,13 @@ def analyze_image_and_text(
     Run analysis via AMD Cloud backend.
     Raises RuntimeError if the backend is unreachable.
     Raises ValueError if the model response cannot be parsed.
+
+    Returns dict with keys: diagnosis, severity, recommended_actions,
+    confidence_score, _metrics (latency_ms, total_tokens, tokens_per_sec).
     """
     lang = language.lower()
     prompt = _build_prompt(image_path, text_description, lang)
-    raw = generate_response(prompt, image_path=image_path)
-    return _parse_response(raw)
+    raw, metrics = generate_response(prompt, image_path=image_path)
+    result = _parse_response(raw)
+    result["_metrics"] = metrics
+    return result

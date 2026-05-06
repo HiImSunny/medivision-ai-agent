@@ -5,6 +5,7 @@ OpenAI-compatible API.  No local model weights are loaded here.
 import base64
 import mimetypes
 import os
+import time
 
 import src.config as config
 
@@ -61,9 +62,15 @@ def check_connection() -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
-def generate_response(prompt: str, image_path: str = None) -> str:
+def generate_response(prompt: str, image_path: str = None) -> tuple[str, dict]:
     """
-    Send a request to the vLLM endpoint and return the model's text output.
+    Send a request to the vLLM endpoint and return (text_output, metrics).
+
+    metrics keys:
+        latency_ms  – wall-clock time for the API call in milliseconds
+        total_tokens – total tokens used (prompt + completion), or 0 if unavailable
+        tokens_per_sec – completion tokens / latency, or 0 if unavailable
+
     Raises RuntimeError if the backend is unreachable or returns an error.
     """
     try:
@@ -86,13 +93,26 @@ def generate_response(prompt: str, image_path: str = None) -> str:
         else:
             messages = [{"role": "user", "content": prompt}]
 
+        t0 = time.perf_counter()
         response = client.chat.completions.create(
             model=config.MODEL_NAME,
             messages=messages,
             max_tokens=config.MAX_NEW_TOKENS,
             temperature=config.TEMPERATURE,
         )
-        return response.choices[0].message.content
+        latency_ms = (time.perf_counter() - t0) * 1000
+
+        usage = getattr(response, "usage", None)
+        completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+        total_tokens = getattr(usage, "total_tokens", 0) or 0
+        tokens_per_sec = (completion_tokens / (latency_ms / 1000)) if latency_ms > 0 and completion_tokens > 0 else 0
+
+        metrics = {
+            "latency_ms": round(latency_ms),
+            "total_tokens": total_tokens,
+            "tokens_per_sec": round(tokens_per_sec, 1),
+        }
+        return response.choices[0].message.content, metrics
 
     except Exception as exc:
         raise RuntimeError(f"AMD Cloud backend unreachable: {exc}") from exc
