@@ -231,32 +231,18 @@ def _metrics_bar(metrics: dict, t: dict) -> str:
     tok_per_sec  = metrics.get("tokens_per_sec", 0)
     total_tokens = metrics.get("total_tokens", 0)
 
-    def _chip(label: str, value: str) -> str:
-        return (
-            f"<span style='display:inline-flex; flex-direction:column; align-items:center; "
-            f"background:#0f172a; border:1px solid #374151; border-radius:8px; "
-            f"padding:6px 14px; min-width:80px;'>"
-            f"<span style='font-size:1rem; font-weight:700; color:#ED1C24;'>{value}</span>"
-            f"<span style='font-size:0.65rem; color:#6b7280; text-transform:uppercase; "
-            f"letter-spacing:.05em; margin-top:2px;'>{label}</span>"
-            f"</span>"
-        )
-
-    latency_val  = f"{latency_ms:,} ms" if latency_ms else "—"
+    latency_val    = f"{latency_ms:,} ms" if latency_ms else "—"
     throughput_val = f"{tok_per_sec} {t['metrics_tokens']}/s" if tok_per_sec else "—"
-    tokens_val   = f"{total_tokens:,} {t['metrics_tokens']}" if total_tokens else "—"
+    tokens_val     = f"{total_tokens:,} {t['metrics_tokens']}" if total_tokens else "—"
 
+    sep = "<span style='color:#374151;'>·</span>"
     return (
-        f"<div style='display:flex; gap:8px; flex-wrap:wrap; align-items:center; "
-        f"justify-content:space-between; background:#1f2937; border-radius:8px; "
-        f"padding:10px 14px; margin-bottom:12px;'>"
-        f"<div style='font-size:0.68rem; color:#6b7280; font-family:monospace; "
-        f"white-space:nowrap;'>⚡ AMD MI300X · ROCm · vLLM</div>"
-        f"<div style='display:flex; gap:8px; flex-wrap:wrap;'>"
-        f"{_chip(t['metrics_latency'], latency_val)}"
-        f"{_chip(t['metrics_throughput'], throughput_val)}"
-        f"{_chip(t['metrics_tokens'], tokens_val)}"
-        f"</div>"
+        f"<div style='font-size:0.7rem; color:#4b5563; font-family:monospace; "
+        f"margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;'>"
+        f"<span>⚡ AMD MI300X</span> {sep} "
+        f"<span>{t['metrics_latency']}: <span style='color:#6b7280;'>{latency_val}</span></span> {sep} "
+        f"<span>{t['metrics_throughput']}: <span style='color:#6b7280;'>{throughput_val}</span></span> {sep} "
+        f"<span>{t['metrics_tokens']}: <span style='color:#6b7280;'>{tokens_val}</span></span>"
         f"</div>"
     )
 
