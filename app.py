@@ -317,29 +317,85 @@ def _body_map_svg(selected: list) -> str:
     def f(sid):
         return _HI if sid in active else _DIM
 
+    def stroke(sid):
+        return "#ED1C24" if sid in active else "#4b5563"
+
+    def glow(sid):
+        return "drop-shadow(0 0 3px #ED1C24)" if sid in active else "none"
+
     return f"""
-<div style='display:flex; flex-direction:column; align-items:center; gap:4px;
-            padding:8px 0; user-select:none;'>
-  <svg viewBox="0 0 80 180" width="72" height="162"
-       xmlns="http://www.w3.org/2000/svg">
-    <ellipse id="svg-head"        cx="40" cy="13"  rx="11" ry="12"           fill="{f('svg-head')}"/>
-    <rect    id="svg-neck"        x="35"  y="24"   width="10" height="8"  rx="2" fill="{f('svg-neck')}"/>
-    <rect    id="svg-chest"       x="22"  y="32"   width="36" height="22" rx="4" fill="{f('svg-chest')}"/>
-    <rect    id="svg-abdomen"     x="22"  y="55"   width="36" height="20" rx="4" fill="{f('svg-abdomen')}"/>
-    <rect    id="svg-upper-back"  x="22"  y="32"   width="36" height="22" rx="4" fill="{'#c0392b' if 'svg-upper-back' in active else 'none'}" opacity="0.5"/>
-    <rect    id="svg-lower-back"  x="22"  y="55"   width="36" height="20" rx="4" fill="{'#c0392b' if 'svg-lower-back' in active else 'none'}" opacity="0.5"/>
-    <rect    id="svg-left-arm"    x="7"   y="32"   width="13" height="38" rx="5" fill="{f('svg-left-arm')}"/>
-    <rect    id="svg-right-arm"   x="60"  y="32"   width="13" height="38" rx="5" fill="{f('svg-right-arm')}"/>
-    <ellipse id="svg-left-hand"   cx="13" cy="76"  rx="7"  ry="5"             fill="{f('svg-left-hand')}"/>
-    <ellipse id="svg-right-hand"  cx="67" cy="76"  rx="7"  ry="5"             fill="{f('svg-right-hand')}"/>
-    <rect    id="svg-groin"       x="27"  y="76"   width="26" height="8"  rx="3" fill="{f('svg-groin')}"/>
-    <rect    id="svg-buttocks"    x="27"  y="76"   width="26" height="8"  rx="3" fill="{'#c0392b' if 'svg-buttocks' in active else 'none'}" opacity="0.6"/>
-    <rect    id="svg-left-leg"    x="22"  y="85"   width="15" height="52" rx="5" fill="{f('svg-left-leg')}"/>
-    <rect    id="svg-right-leg"   x="43"  y="85"   width="15" height="52" rx="5" fill="{f('svg-right-leg')}"/>
-    <ellipse id="svg-left-foot"   cx="29" cy="142" rx="10" ry="5"             fill="{f('svg-left-foot')}"/>
-    <ellipse id="svg-right-foot"  cx="51" cy="142" rx="10" ry="5"             fill="{f('svg-right-foot')}"/>
+<div style='display:flex; flex-direction:column; align-items:center; gap:6px;
+            padding:8px 4px; user-select:none;'>
+  <div style='font-size:0.58rem; color:#64748b; font-family:monospace;
+              letter-spacing:0.06em; text-transform:uppercase;'>Anatomical Map</div>
+  <svg viewBox="0 0 80 180" width="76" height="170"
+       xmlns="http://www.w3.org/2000/svg" style='overflow:visible;'>
+    <style>
+      .bpart {{ transition: fill 0.2s, filter 0.2s; cursor:pointer; }}
+      .bpart:hover {{ fill: #f97316 !important; filter: drop-shadow(0 0 4px #f97316); }}
+    </style>
+    <!-- Head -->
+    <ellipse class="bpart" id="svg-head" cx="40" cy="13" rx="11" ry="12"
+             fill="{f('svg-head')}" stroke="{stroke('svg-head')}" stroke-width="0.8"
+             style="filter:{glow('svg-head')}"/>
+    <!-- Neck -->
+    <rect class="bpart" id="svg-neck" x="35" y="24" width="10" height="8" rx="2"
+          fill="{f('svg-neck')}" stroke="{stroke('svg-neck')}" stroke-width="0.8"
+          style="filter:{glow('svg-neck')}"/>
+    <!-- Chest -->
+    <rect class="bpart" id="svg-chest" x="22" y="32" width="36" height="22" rx="4"
+          fill="{f('svg-chest')}" stroke="{stroke('svg-chest')}" stroke-width="0.8"
+          style="filter:{glow('svg-chest')}"/>
+    <!-- Abdomen -->
+    <rect class="bpart" id="svg-abdomen" x="22" y="55" width="36" height="20" rx="4"
+          fill="{f('svg-abdomen')}" stroke="{stroke('svg-abdomen')}" stroke-width="0.8"
+          style="filter:{glow('svg-abdomen')}"/>
+    <!-- Upper Back (overlay stripe) -->
+    <rect class="bpart" id="svg-upper-back" x="22" y="32" width="36" height="11" rx="4"
+          fill="{'#ED1C24' if 'svg-upper-back' in active else 'none'}" opacity="0.45"
+          stroke="{'#ED1C24' if 'svg-upper-back' in active else 'none'}" stroke-width="0.6"/>
+    <!-- Lower Back (overlay stripe) -->
+    <rect class="bpart" id="svg-lower-back" x="22" y="55" width="36" height="10" rx="4"
+          fill="{'#ED1C24' if 'svg-lower-back' in active else 'none'}" opacity="0.45"
+          stroke="{'#ED1C24' if 'svg-lower-back' in active else 'none'}" stroke-width="0.6"/>
+    <!-- Arms -->
+    <rect class="bpart" id="svg-left-arm" x="7" y="32" width="13" height="38" rx="5"
+          fill="{f('svg-left-arm')}" stroke="{stroke('svg-left-arm')}" stroke-width="0.8"
+          style="filter:{glow('svg-left-arm')}"/>
+    <rect class="bpart" id="svg-right-arm" x="60" y="32" width="13" height="38" rx="5"
+          fill="{f('svg-right-arm')}" stroke="{stroke('svg-right-arm')}" stroke-width="0.8"
+          style="filter:{glow('svg-right-arm')}"/>
+    <!-- Hands -->
+    <ellipse class="bpart" id="svg-left-hand" cx="13" cy="76" rx="7" ry="5"
+             fill="{f('svg-left-hand')}" stroke="{stroke('svg-left-hand')}" stroke-width="0.8"
+             style="filter:{glow('svg-left-hand')}"/>
+    <ellipse class="bpart" id="svg-right-hand" cx="67" cy="76" rx="7" ry="5"
+             fill="{f('svg-right-hand')}" stroke="{stroke('svg-right-hand')}" stroke-width="0.8"
+             style="filter:{glow('svg-right-hand')}"/>
+    <!-- Groin -->
+    <rect class="bpart" id="svg-groin" x="27" y="76" width="26" height="8" rx="3"
+          fill="{f('svg-groin')}" stroke="{stroke('svg-groin')}" stroke-width="0.8"
+          style="filter:{glow('svg-groin')}"/>
+    <!-- Buttocks overlay -->
+    <rect class="bpart" id="svg-buttocks" x="27" y="76" width="26" height="8" rx="3"
+          fill="{'#ED1C24' if 'svg-buttocks' in active else 'none'}" opacity="0.55"
+          stroke="{'#ED1C24' if 'svg-buttocks' in active else 'none'}" stroke-width="0.6"/>
+    <!-- Legs -->
+    <rect class="bpart" id="svg-left-leg" x="22" y="85" width="15" height="52" rx="5"
+          fill="{f('svg-left-leg')}" stroke="{stroke('svg-left-leg')}" stroke-width="0.8"
+          style="filter:{glow('svg-left-leg')}"/>
+    <rect class="bpart" id="svg-right-leg" x="43" y="85" width="15" height="52" rx="5"
+          fill="{f('svg-right-leg')}" stroke="{stroke('svg-right-leg')}" stroke-width="0.8"
+          style="filter:{glow('svg-right-leg')}"/>
+    <!-- Feet -->
+    <ellipse class="bpart" id="svg-left-foot" cx="29" cy="142" rx="10" ry="5"
+             fill="{f('svg-left-foot')}" stroke="{stroke('svg-left-foot')}" stroke-width="0.8"
+             style="filter:{glow('svg-left-foot')}"/>
+    <ellipse class="bpart" id="svg-right-foot" cx="51" cy="142" rx="10" ry="5"
+             fill="{f('svg-right-foot')}" stroke="{stroke('svg-right-foot')}" stroke-width="0.8"
+             style="filter:{glow('svg-right-foot')}"/>
   </svg>
-  <div style='font-size:0.6rem; color:#4b5563; font-family:monospace;'>anatomical map</div>
+  {'<div style="font-size:0.58rem; color:#ED1C24; font-family:monospace; font-weight:600;">' + str(len(active)) + ' region(s) selected</div>' if active else '<div style="font-size:0.58rem; color:#4b5563; font-family:monospace;">select region(s)</div>'}
 </div>
 """
 
@@ -362,14 +418,24 @@ def _metrics_bar(metrics: dict, t: dict) -> str:
     throughput_val = f"{tok_per_sec} {t['metrics_tokens']}/s" if tok_per_sec else "—"
     tokens_val     = f"{total_tokens:,} {t['metrics_tokens']}" if total_tokens else "—"
 
-    sep = "<span style='color:#374151;'>·</span>"
+    def chip(icon, label, val):
+        return (
+            f"<div style='display:flex; align-items:center; gap:5px; "
+            f"background:#0f172a; border:1px solid #1e3a5f; border-radius:6px; "
+            f"padding:4px 10px;'>"
+            f"<span style='color:#ED1C24; font-size:0.8rem;'>{icon}</span>"
+            f"<span style='color:#94a3b8; font-size:0.68rem;'>{label}</span>"
+            f"<span style='color:#e2e8f0; font-size:0.72rem; font-weight:700;'>{val}</span>"
+            f"</div>"
+        )
+
     return (
-        f"<div style='font-size:0.7rem; color:#4b5563; font-family:monospace; "
-        f"margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;'>"
-        f"<span>⚡ AMD MI300X</span> {sep} "
-        f"<span>{t['metrics_latency']}: <span style='color:#6b7280;'>{latency_val}</span></span> {sep} "
-        f"<span>{t['metrics_throughput']}: <span style='color:#6b7280;'>{throughput_val}</span></span> {sep} "
-        f"<span>{t['metrics_tokens']}: <span style='color:#6b7280;'>{tokens_val}</span></span>"
+        f"<div style='display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;'>"
+        f"<span style='font-size:0.68rem; color:#ED1C24; font-family:monospace; "
+        f"font-weight:700; letter-spacing:0.05em; margin-right:2px;'>⚡ AMD MI300X</span>"
+        f"{chip('⏱', t['metrics_latency'], latency_val)}"
+        f"{chip('🚀', t['metrics_throughput'], throughput_val)}"
+        f"{chip('◈', t['metrics_tokens'], tokens_val)}"
         f"</div>"
     )
 
@@ -579,6 +645,8 @@ def predict(image, symptoms: str, lang_choice: str, selected_regions):
 # ---------------------------------------------------------------------------
 
 CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
 body, .gradio-container {
     background-color: #030712 !important;
     color: #f9fafb !important;
@@ -588,22 +656,35 @@ input:focus, textarea:focus {
     border-color: #ED1C24 !important;
     box-shadow: 0 0 0 2px rgba(237,28,36,0.25) !important;
 }
+
+/* ── CTA button — full-width AMD red with glow ── */
 button.primary, .gr-button-primary {
     background: linear-gradient(135deg, #ED1C24 0%, #b01318 100%) !important;
     color: #fff !important;
     border: none !important;
     font-weight: 700 !important;
-    letter-spacing: 0.03em !important;
-    transition: opacity 0.2s !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    width: 100% !important;
+    padding: 14px 0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 0 16px rgba(237,28,36,0.45), 0 4px 12px rgba(0,0,0,0.4) !important;
+    transition: box-shadow 0.25s ease, opacity 0.2s !important;
 }
-button.primary:hover { opacity: 0.88 !important; }
+button.primary:hover {
+    opacity: 0.92 !important;
+    box-shadow: 0 0 28px rgba(237,28,36,0.65), 0 6px 16px rgba(0,0,0,0.5) !important;
+}
+button.primary:active { opacity: 0.8 !important; transform: scale(0.99) !important; }
+
 .gr-box, .gr-panel {
     background: #111827 !important;
     border: 1px solid #1f2937 !important;
     border-radius: 10px !important;
 }
 label span, .gr-form > label {
-    color: #9ca3af !important;
+    color: #cbd5e1 !important;
     font-size: 0.82rem !important;
     font-weight: 600 !important;
     text-transform: uppercase;
@@ -614,7 +695,7 @@ footer { display: none !important; }
 ::-webkit-scrollbar-track { background: #111827; }
 ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 
-/* ── Topbar: status left, lang right ─────────────────────── */
+/* ── Topbar ── */
 #topbar {
     display: flex !important;
     align-items: center !important;
@@ -627,6 +708,72 @@ footer { display: none !important; }
 #topbar > div { width: 100% !important; }
 #lang-col { min-width: 180px !important; max-width: 200px !important; }
 #lang-col label span { text-transform: none !important; font-size: 0.78rem !important; }
+
+/* ── Mobile: hide drag-and-drop text ── */
+@media (pointer: coarse), (max-width: 768px) {
+    .upload-container [data-testid="drop-zone"] .upload-text:first-child,
+    .svelte-upload .file-preview-title,
+    span.drag-text, .drag-drop-label { display: none !important; }
+    .upload-container { min-height: 120px !important; }
+    /* Prioritise camera/file button visual */
+    .upload-container button { font-size: 0.9rem !important; padding: 10px 20px !important; }
+}
+
+/* ── Quick Examples — horizontal scroll on mobile ── */
+@media (max-width: 768px) {
+    .gr-samples table, table.gr-samples-table {
+        display: flex !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 8px !important;
+        padding-bottom: 6px !important;
+    }
+    .gr-samples tr, .gr-samples-table tr {
+        display: inline-flex !important;
+        flex-direction: column !important;
+        min-width: 220px !important;
+        background: #111827 !important;
+        border: 1px solid #1f2937 !important;
+        border-radius: 8px !important;
+        padding: 8px 10px !important;
+        white-space: normal !important;
+    }
+    .gr-samples thead, .gr-samples-table thead { display: none !important; }
+}
+
+/* ── AMD loading overlay ── */
+#amd-loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(3,7,18,0.82);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+}
+#amd-loading-overlay.active { display: flex !important; }
+.amd-spinner {
+    width: 52px; height: 52px;
+    border: 4px solid #1f2937;
+    border-top-color: #ED1C24;
+    border-radius: 50%;
+    animation: amd-spin 0.8s linear infinite;
+}
+@keyframes amd-spin { to { transform: rotate(360deg); } }
+.amd-step-bar {
+    display: flex; gap: 10px; align-items: center;
+}
+.amd-step {
+    font-size: 0.72rem; font-family: monospace;
+    color: #4b5563; transition: color 0.3s;
+    display: flex; align-items: center; gap: 4px;
+}
+.amd-step.active { color: #ED1C24; font-weight: 700; }
+.amd-step.done   { color: #22c55e; }
+.amd-step-sep    { color: #1f2937; font-size: 0.7rem; }
 
 """
 
@@ -670,6 +817,96 @@ FOOTER_HTML = """
     &nbsp;·&nbsp; Track 3: Vision &amp; Multimodal AI &nbsp;·&nbsp; MIT License
   </span>
 </div>
+
+<!-- AMD Loading Overlay -->
+<div id='amd-loading-overlay' role='status' aria-live='polite' aria-label='Analyzing with AMD MI300X'>
+  <div class='amd-spinner'></div>
+  <div style='font-size:0.9rem; font-weight:700; color:#f9fafb; letter-spacing:0.04em;'>
+    Analyzing with AMD MI300X&hellip;
+  </div>
+  <div class='amd-step-bar'>
+    <span class='amd-step' id='step-vision'>&#9632; Vision Encode</span>
+    <span class='amd-step-sep'>›</span>
+    <span class='amd-step' id='step-llm'>&#9632; LLM Inference</span>
+    <span class='amd-step-sep'>›</span>
+    <span class='amd-step' id='step-parse'>&#9632; Parse Result</span>
+  </div>
+  <div style='font-size:0.65rem; color:#4b5563; font-family:monospace;'>
+    ROCm · Qwen2.5-VL-7B · AMD Dev Cloud
+  </div>
+</div>
+
+<script>
+(function() {
+  var overlay   = document.getElementById('amd-loading-overlay');
+  var stepIds   = ['step-vision','step-llm','step-parse'];
+  var stepTimer = null;
+
+  function resetSteps() {
+    stepIds.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) { el.className = 'amd-step'; }
+    });
+  }
+
+  function animateSteps() {
+    var idx = 0;
+    resetSteps();
+    stepTimer = setInterval(function() {
+      if (idx > 0) {
+        var prev = document.getElementById(stepIds[idx-1]);
+        if (prev) prev.className = 'amd-step done';
+      }
+      var cur = document.getElementById(stepIds[idx]);
+      if (cur) cur.className = 'amd-step active';
+      idx++;
+      if (idx >= stepIds.length) { clearInterval(stepTimer); }
+    }, 1100);
+  }
+
+  function showOverlay() {
+    overlay.classList.add('active');
+    animateSteps();
+  }
+
+  function hideOverlay() {
+    overlay.classList.remove('active');
+    clearInterval(stepTimer);
+    resetSteps();
+  }
+
+  function attachBtn() {
+    var btns = document.querySelectorAll('button.primary, button[variant="primary"]');
+    btns.forEach(function(btn) {
+      if (btn.dataset.amdBound) return;
+      btn.dataset.amdBound = '1';
+      btn.addEventListener('click', function() {
+        showOverlay();
+        // Hide after max 60s as fallback; Gradio output change hides it sooner
+        var fallback = setTimeout(hideOverlay, 60000);
+        var observer = new MutationObserver(function() {
+          var out = document.querySelector('.output-html, [data-testid="html"]');
+          if (out && out.innerText.trim().length > 10) {
+            hideOverlay();
+            clearTimeout(fallback);
+            observer.disconnect();
+          }
+        });
+        var target = document.querySelector('.gradio-container') || document.body;
+        observer.observe(target, { childList: true, subtree: true, characterData: true });
+      });
+    });
+  }
+
+  // Attach after Gradio renders
+  var initTimer = setInterval(function() {
+    if (document.querySelector('button.primary')) {
+      attachBtn();
+      clearInterval(initTimer);
+    }
+  }, 400);
+})();
+</script>
 """
 
 with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X") as demo:
