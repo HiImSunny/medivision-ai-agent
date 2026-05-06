@@ -15,7 +15,7 @@ Pillow==10.4.0
 # On AMD MI300X with ROCm: install via
 #   pip install torch --index-url https://download.pytorch.org/whl/rocm6.1
 # The CPU/CUDA wheel is listed here as a fallback for non-AMD environments.
-torch==2.4.0
+torch==2.6.0
 
 # ── HuggingFace Hub (model download, HF Spaces auth) ───────────────────────
 huggingface_hub==0.24.6
