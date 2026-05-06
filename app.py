@@ -182,21 +182,20 @@ def get_backend_status_html(lang: str = "en") -> str:
 # ---------------------------------------------------------------------------
 
 _SEVERITY_COLOR = {
-    "Low": ("#22c55e", "#dcfce7"),    "Thấp": ("#22c55e", "#dcfce7"),
-    "低": ("#22c55e", "#dcfce7"),     "Baja": ("#22c55e", "#dcfce7"),
-    "Faible": ("#22c55e", "#dcfce7"), "軽度": ("#22c55e", "#dcfce7"),
+    "Low":    ("#22c55e", "#dcfce7"),
+    "Medium": ("#eab308", "#fef9c3"),
+    "High":   ("#f97316", "#ffedd5"),
+    "Urgent": ("#ef4444", "#fee2e2"),
+}
 
-    "Medium": ("#eab308", "#fef9c3"),   "Trung bình": ("#eab308", "#fef9c3"),
-    "中": ("#eab308", "#fef9c3"),       "Media": ("#eab308", "#fef9c3"),
-    "Modérée": ("#eab308", "#fef9c3"), "中等度": ("#eab308", "#fef9c3"),
-
-    "High": ("#f97316", "#ffedd5"),   "Cao": ("#f97316", "#ffedd5"),
-    "高": ("#f97316", "#ffedd5"),     "Alta": ("#f97316", "#ffedd5"),
-    "Élevée": ("#f97316", "#ffedd5"), "重度": ("#f97316", "#ffedd5"),
-
-    "Urgent": ("#ef4444", "#fee2e2"),    "Khẩn cấp": ("#ef4444", "#fee2e2"),
-    "紧急": ("#ef4444", "#fee2e2"),     "Urgente": ("#ef4444", "#fee2e2"),
-    "Urgente": ("#ef4444", "#fee2e2"),  "緊急": ("#ef4444", "#fee2e2"),
+# Translate English severity keys to display language
+_SEVERITY_TRANSLATE = {
+    "en": {"Low": "Low",       "Medium": "Medium",     "High": "High",   "Urgent": "Urgent"},
+    "vn": {"Low": "Thấp",      "Medium": "Trung bình", "High": "Cao",    "Urgent": "Khẩn cấp"},
+    "zh": {"Low": "低",         "Medium": "中",          "High": "高",     "Urgent": "紧急"},
+    "es": {"Low": "Leve",      "Medium": "Moderada",   "High": "Alta",   "Urgent": "Urgente"},
+    "fr": {"Low": "Faible",    "Medium": "Modérée",    "High": "Élevée", "Urgent": "Urgente"},
+    "ja": {"Low": "軽度",       "Medium": "中等度",      "High": "重度",   "Urgent": "緊急"},
 }
 
 
@@ -235,11 +234,12 @@ def _empty_output_html(lang: str) -> str:
 
 
 def _build_result_html(result: dict, lang: str) -> str:
-    t       = _I18N.get(lang, _I18N["en"])
-    diag    = result.get("diagnosis", "")
-    sev     = result.get("severity", "Low")
-    actions = result.get("recommended_actions", [])
-    score   = result.get("confidence_score", 0)
+    t          = _I18N.get(lang, _I18N["en"])
+    diag       = result.get("diagnosis", "")
+    sev_en     = result.get("severity", "Low")
+    sev        = _SEVERITY_TRANSLATE.get(lang, _SEVERITY_TRANSLATE["en"]).get(sev_en, sev_en)
+    actions    = result.get("recommended_actions", [])
+    score      = result.get("confidence_score", 0)
 
     actions_html = "".join(
         f"<li style='margin:5px 0; color:#d1d5db;'>{a}</li>" for a in actions
