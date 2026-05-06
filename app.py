@@ -1,9 +1,10 @@
 import gradio as gr
 from src.inference import MediVisionPipeline
+from src.model_loader import check_connection
 import src.config as config
 
 # ---------------------------------------------------------------------------
-# Pipeline (singleton, lazy-init inside Gradio's worker)
+# Pipeline singleton
 # ---------------------------------------------------------------------------
 _pipeline: MediVisionPipeline | None = None
 
@@ -16,16 +17,47 @@ def get_pipeline() -> MediVisionPipeline:
 
 
 # ---------------------------------------------------------------------------
+# Backend connection status
+# ---------------------------------------------------------------------------
+
+def get_backend_status_html() -> str:
+    connected, msg = check_connection()
+    if connected:
+        return (
+            "<div style='display:flex; align-items:center; justify-content:center; "
+            "gap:8px; padding:8px 16px; margin:0 auto 4px; max-width:640px; "
+            "background:#052e16; border:1px solid #16a34a; border-radius:8px;'>"
+            "  <span style='width:9px; height:9px; border-radius:50%; "
+            "background:#22c55e; display:inline-block; flex-shrink:0; "
+            "box-shadow:0 0 6px #22c55e;'></span>"
+            "  <span style='font-size:0.78rem; color:#86efac; font-family:monospace;'>"
+            f"AMD Developer Cloud connected &nbsp;·&nbsp; Qwen2.5-VL-7B-Instruct &nbsp;·&nbsp; {config.VLLM_API_URL}"
+            "  </span>"
+            "</div>"
+        )
+    else:
+        return (
+            "<div style='display:flex; align-items:center; justify-content:center; "
+            "gap:8px; padding:8px 16px; margin:0 auto 4px; max-width:640px; "
+            "background:#1c0a00; border:1px solid #c2410c; border-radius:8px;'>"
+            "  <span style='width:9px; height:9px; border-radius:50%; "
+            "background:#f97316; display:inline-block; flex-shrink:0;'></span>"
+            "  <span style='font-size:0.78rem; color:#fdba74; font-family:monospace;'>"
+            f"Demo mode &nbsp;·&nbsp; AMD Cloud unreachable &nbsp;·&nbsp; {msg}"
+            "  </span>"
+            "</div>"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Severity helpers
 # ---------------------------------------------------------------------------
 
 _SEVERITY_COLOR = {
-    # English
-    "Low":    ("#22c55e", "#dcfce7"),   # green
-    "Medium": ("#eab308", "#fef9c3"),   # yellow
-    "High":   ("#f97316", "#ffedd5"),   # orange
-    "Urgent": ("#ef4444", "#fee2e2"),   # red
-    # Vietnamese aliases
+    "Low":       ("#22c55e", "#dcfce7"),
+    "Medium":    ("#eab308", "#fef9c3"),
+    "High":      ("#f97316", "#ffedd5"),
+    "Urgent":    ("#ef4444", "#fee2e2"),
     "Thấp":      ("#22c55e", "#dcfce7"),
     "Trung bình": ("#eab308", "#fef9c3"),
     "Cao":       ("#f97316", "#ffedd5"),
@@ -59,23 +91,23 @@ def _confidence_bar(score: int) -> str:
 
 
 def _build_result_html(result: dict, lang: str) -> str:
-    diag = result.get("diagnosis", "")
-    sev  = result.get("severity", "Low")
+    diag    = result.get("diagnosis", "")
+    sev     = result.get("severity", "Low")
     actions = result.get("recommended_actions", [])
-    score = result.get("confidence_score", 0)
+    score   = result.get("confidence_score", 0)
 
     if lang == "vn":
-        diag_label    = "Gợi ý chẩn đoán"
+        diag_label     = "Gợi ý chẩn đoán"
         severity_label = "Mức độ nghiêm trọng"
-        actions_label = "Khuyến nghị"
+        actions_label  = "Khuyến nghị"
         disclaimer = (
             "Đây là trợ lý AI, không phải bác sĩ. "
             "Hãy tham khảo chuyên gia y tế cho các tình trạng nghiêm trọng."
         )
     else:
-        diag_label    = "Diagnosis Suggestion"
+        diag_label     = "Diagnosis Suggestion"
         severity_label = "Severity"
-        actions_label = "Recommended Actions"
+        actions_label  = "Recommended Actions"
         disclaimer = (
             "This is an AI assistant, not a licensed physician. "
             "Always consult a healthcare professional for serious conditions."
@@ -84,13 +116,22 @@ def _build_result_html(result: dict, lang: str) -> str:
     actions_html = "".join(
         f"<li style='margin:5px 0; color:#d1d5db;'>{a}</li>"
         for a in actions
-    ) if actions else f"<li style='color:#6b7280;'>—</li>"
+    ) if actions else "<li style='color:#6b7280;'>—</li>"
 
-    mock_tag = (
-        "<span style='font-size:0.7rem; background:#374151; color:#9ca3af; "
-        "padding:2px 8px; border-radius:4px; margin-left:8px;'>MOCK</span>"
-        if config.MOCK_MODE else ""
-    )
+    if config.MOCK_MODE:
+        backend_tag = (
+            "<span style='font-size:0.7rem; background:#431407; color:#fdba74; "
+            "padding:2px 8px; border-radius:4px; margin-left:8px; "
+            "border:1px solid #c2410c;'>Demo Mode</span>"
+        )
+        backend_info = "Demo Mode · Representative Response"
+    else:
+        backend_tag = (
+            "<span style='font-size:0.7rem; background:#052e16; color:#86efac; "
+            "padding:2px 8px; border-radius:4px; margin-left:8px; "
+            "border:1px solid #16a34a;'>AMD Cloud</span>"
+        )
+        backend_info = "AMD MI300X · ROCm · Qwen2.5-VL-7B"
 
     return f"""
 <div style='background:#111827; border:1px solid #ED1C24; border-radius:12px;
@@ -101,9 +142,9 @@ def _build_result_html(result: dict, lang: str) -> str:
     <div style='background:#ED1C24; width:4px; border-radius:2px; height:36px;'></div>
     <div>
       <div style='font-size:1.1rem; font-weight:700; color:#ED1C24;'>
-        MediVision Analysis {mock_tag}
+        MediVision Analysis {backend_tag}
       </div>
-      <div style='font-size:0.75rem; color:#6b7280;'>AMD MI300X · ROCm · Qwen-VL</div>
+      <div style='font-size:0.75rem; color:#6b7280;'>{backend_info}</div>
     </div>
   </div>
 
@@ -158,10 +199,13 @@ def predict(image, symptoms: str, lang_choice: str):
             if lang == "en"
             else "Vui lòng tải lên hình ảnh hoặc nhập triệu chứng."
         )
-        return f"<p style='color:#9ca3af; text-align:center;'>{placeholder}</p>"
+        return (
+            f"<p style='color:#9ca3af; text-align:center;'>{placeholder}</p>",
+            get_backend_status_html(),
+        )
 
     result = get_pipeline().process(image, symptoms.strip(), lang=lang)
-    return _build_result_html(result, lang)
+    return _build_result_html(result, lang), get_backend_status_html()
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +282,7 @@ HEADER_HTML = """
     </span>
     <span style='background:#1f2937; color:#9ca3af; font-size:0.72rem; font-weight:600;
                  padding:3px 12px; border-radius:999px; border:1px solid #374151;'>
-      ROCm · Qwen-VL-Chat
+      ROCm · Qwen2.5-VL-7B
     </span>
     <span style='background:#1f2937; color:#9ca3af; font-size:0.72rem; font-weight:600;
                  padding:3px 12px; border-radius:999px; border:1px solid #374151;'>
@@ -262,6 +306,9 @@ FOOTER_HTML = """
 with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X") as demo:
 
     gr.HTML(HEADER_HTML)
+
+    # Connection status bar — auto-populated on load, refreshed after each analysis
+    status_bar = gr.HTML(value="<div style='height:36px;'></div>")
 
     with gr.Row(equal_height=False):
         # ── Left column: inputs ───────────────────────────────────────────
@@ -291,7 +338,6 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 size="lg",
             )
 
-            # ── Example images ─────────────────────────────────────────
             gr.Examples(
                 examples=[
                     [None, "I have a red, itchy rash on my forearm for 3 days. It burns slightly.", "English"],
@@ -320,9 +366,12 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
     submit_btn.click(
         fn=predict,
         inputs=[input_img, symptoms_txt, lang_radio],
-        outputs=output_html,
+        outputs=[output_html, status_bar],
         api_name="analyze",
     )
+
+    # Populate status bar immediately when the page loads
+    demo.load(fn=get_backend_status_html, inputs=[], outputs=status_bar)
 
     gr.HTML(FOOTER_HTML)
 

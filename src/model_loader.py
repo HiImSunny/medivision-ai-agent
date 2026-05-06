@@ -8,7 +8,6 @@ import os
 
 import src.config as config
 
-# Lazy singleton — created on first call to generate_response()
 _client = None
 
 
@@ -24,7 +23,6 @@ def _get_client():
 
 
 def _encode_image(image_path: str) -> tuple[str, str]:
-    """Return (base64_data, mime_type) for an image file."""
     mime_type, _ = mimetypes.guess_type(image_path)
     if not mime_type:
         mime_type = "image/jpeg"
@@ -33,10 +31,29 @@ def _encode_image(image_path: str) -> tuple[str, str]:
     return data, mime_type
 
 
+def check_connection() -> tuple[bool, str]:
+    """
+    Ping the vLLM server's /v1/models endpoint.
+    Returns (is_connected: bool, status_message: str).
+    """
+    if config.MOCK_MODE:
+        return False, "Mock mode enabled"
+    try:
+        import requests as req
+        url = f"{config.VLLM_API_URL}/v1/models"
+        api_key = os.environ.get("VLLM_API_KEY", "not-required")
+        r = req.get(url, headers={"Authorization": f"Bearer {api_key}"}, timeout=5)
+        if r.status_code == 200:
+            return True, f"Connected · {config.VLLM_API_URL}"
+        return False, f"Server returned HTTP {r.status_code}"
+    except Exception as exc:
+        return False, f"Unreachable: {exc}"
+
+
 def generate_response(prompt: str, image_path: str = None) -> str | None:
     """
     Send a request to the vLLM endpoint and return the model's text output.
-    Returns None when MOCK_MODE is active so callers fall back to mock logic.
+    Returns None on failure so callers fall back to mock logic.
     """
     if config.MOCK_MODE:
         return None
