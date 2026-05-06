@@ -18,7 +18,7 @@ license: mit
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Powered by AMD](https://img.shields.io/badge/Powered%20by-AMD%20MI300X%20%2B%20ROCm-ED1C24)](https://www.amd.com/en/products/accelerators/instinct/mi300.html)
 
-MediVision is a bilingual (English / Vietnamese) multimodal AI assistant that analyzes skin wound and disease images combined with patient symptom descriptions. It runs on AMD Instinct™ MI300X GPUs with ROCm and delivers structured clinical insights via a sleek Gradio interface.
+MediVision is a bilingual (English / Vietnamese) multimodal AI assistant that analyzes skin wound and disease images combined with patient symptom descriptions. Inference is served by a **vLLM server running on AMD Developer Cloud** (AMD Instinct™ MI300X + ROCm), and the lightweight Gradio frontend on Hugging Face Spaces simply calls that API — no model weights are loaded in the Space itself.
 
 ---
 
@@ -28,34 +28,43 @@ MediVision is a bilingual (English / Vietnamese) multimodal AI assistant that an
 
 ---
 
-## Screenshots
+## Architecture
 
-> _Add screenshots of the live UI here_
+```
+User Browser
+     │
+     ▼
+Hugging Face Space  (Gradio UI — CPU, no GPU needed)
+     │  HTTP  (OpenAI-compatible chat/completions)
+     ▼
+AMD Developer Cloud VM
+└── vLLM server  ←  Qwen/Qwen2.5-VL-7B-Instruct
+        running on AMD Instinct™ MI300X + ROCm
+```
 
-| Upload & Analyze | Results Card |
-|:---:|:---:|
-| ![Upload screen](sample_test_images/screenshot_upload.png) | ![Results screen](sample_test_images/screenshot_results.png) |
+The HF Space encodes any uploaded image as base64 and passes it to the vLLM
+endpoint via the standard OpenAI vision message format.  This keeps the Space
+footprint tiny (no PyTorch, no model download) while all heavy lifting happens
+on the AMD GPU server.
 
 ---
 
 ## Features
 
 - **Multimodal Analysis** — Combines skin image + freeform symptom text for richer diagnosis suggestions.
-- **Bilingual** — Full English and Vietnamese (Tiếng Việt) support; auto-detects input language preference.
+- **Bilingual** — Full English and Vietnamese (Tiếng Việt) support.
 - **Structured Output** — Every analysis returns:
   - Diagnosis suggestion
   - Severity badge: `Low` · `Medium` · `High` · `Urgent`
   - Actionable recommended steps (clinical-grade language)
   - Confidence score with visual progress bar
-- **AMD MI300X Optimized** — Inference runs on the world-class AMD Instinct™ MI300X via ROCm.
-- **Graceful Mock Mode** — Falls back to realistic mock responses if the GPU model is unavailable, so the demo always runs.
-- **HF Space Ready** — Single `app.py` entry point, compatible with Hugging Face Spaces.
+- **AMD MI300X Powered** — Inference via vLLM on AMD Instinct™ MI300X + ROCm.
+- **Graceful Mock Mode** — Falls back to realistic mock responses if the vLLM server is unreachable, so the demo always runs.
+- **HF Space Ready** — Minimal dependencies; no GPU required in the Space.
 
 ---
 
 ## Conditions Analyzed
-
-The model is trained to identify and advise on (but not limited to):
 
 | Condition | Typical Severity |
 |---|---|
@@ -73,11 +82,11 @@ The model is trained to identify and advise on (but not limited to):
 
 | Layer | Technology |
 |---|---|
-| Vision Model | [Qwen/Qwen-VL-Chat](https://huggingface.co/Qwen/Qwen-VL-Chat) |
-| Inference Runtime | `transformers` + `optimum[amd]` on **AMD ROCm** |
-| Hardware | **AMD Instinct™ MI300X** (192 GB HBM3) |
-| Agent Orchestration | LangChain |
-| Frontend | Gradio 4 |
+| Vision Model | [Qwen/Qwen2.5-VL-7B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct) |
+| Inference Runtime | **vLLM** (OpenAI-compatible API) |
+| Inference Hardware | **AMD Instinct™ MI300X** (192 GB HBM3) + ROCm |
+| Inference Host | AMD Developer Cloud |
+| Frontend | Gradio 4 (Hugging Face Space — CPU) |
 | Language Support | English / Tiếng Việt |
 
 ---
@@ -87,17 +96,18 @@ The model is trained to identify and advise on (but not limited to):
 ```
 medivision-ai-agent/
 ├── app.py                   # HF Space entry point (Gradio UI)
-├── requirements.txt         # Pinned dependencies
+├── requirements.txt         # Minimal dependencies (no PyTorch)
+├── .env.example             # Environment variable reference
 ├── README.md                # This file
 ├── LICENSE                  # MIT
 ├── src/
 │   ├── __init__.py
-│   ├── config.py            # MODEL_NAME, MOCK_MODE, device settings
-│   ├── model_loader.py      # Qwen-VL-Chat loader (real + mock fallback)
+│   ├── config.py            # VLLM_API_URL, MODEL_NAME, MOCK_MODE, etc.
+│   ├── model_loader.py      # OpenAI client → vLLM (image base64 + text)
 │   ├── agent.py             # analyze_image_and_text(), mock data pools
 │   └── inference.py         # MediVisionPipeline orchestrator
 └── sample_test_images/
-    └── ABOUT.md             # Instructions for adding test images
+    └── ABOUT.md
 ```
 
 ---
@@ -107,12 +117,13 @@ medivision-ai-agent/
 ### Prerequisites
 
 - Python 3.10+
-- AMD GPU with [ROCm 6.1+](https://rocm.docs.amd.com/) **or** any CUDA GPU **or** CPU (mock mode)
+- A running vLLM server with `Qwen/Qwen2.5-VL-7B-Instruct`  
+  (AMD Developer Cloud or any machine with an AMD/NVIDIA GPU)
 
 ### 1. Clone
 
 ```bash
-git clone https://huggingface.co/spaces/lablab-ai-amd-developer-hackathon/medivision-ai-agent
+git clone https://github.com/your-org/medivision-ai-agent
 cd medivision-ai-agent
 ```
 
@@ -122,18 +133,18 @@ cd medivision-ai-agent
 pip install -r requirements.txt
 ```
 
-For AMD ROCm, replace the PyTorch install:
+### 3. Configure the vLLM endpoint
 
 ```bash
-pip install torch --index-url https://download.pytorch.org/whl/rocm6.1
+cp .env.example .env
+# Edit .env and set VLLM_API_URL to your AMD VM address
 ```
 
-### 3. (Optional) Set environment variables
+Or export directly:
 
 ```bash
-export MODEL_NAME="Qwen/Qwen-VL-Chat"   # default
-export MOCK_MODE=false                   # set true to skip model download
-export HF_TOKEN="hf_..."                # if model is gated
+export VLLM_API_URL=http://<AMD_VM_IP>:8000
+export MODEL_NAME=Qwen/Qwen2.5-VL-7B-Instruct
 ```
 
 ### 4. Launch
@@ -144,7 +155,7 @@ python app.py
 
 The app is available at `http://localhost:7860`.
 
-### 5. Force mock mode (no GPU required)
+### 5. Force mock mode (no vLLM server required)
 
 ```bash
 MOCK_MODE=true python app.py
@@ -152,16 +163,36 @@ MOCK_MODE=true python app.py
 
 ---
 
+## Starting the vLLM Server (AMD Developer Cloud)
+
+On your AMD MI300X VM with ROCm installed:
+
+```bash
+pip install vllm
+
+vllm serve Qwen/Qwen2.5-VL-7B-Instruct \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --dtype float16 \
+    --max-model-len 4096
+```
+
+The server exposes an OpenAI-compatible API at `http://<VM_IP>:8000/v1`.
+
+---
+
 ## Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `MODEL_NAME` | `Qwen/Qwen-VL-Chat` | HF model ID to load |
-| `MOCK_MODE` | `false` | Force mock mode (skip real model) |
-| `DEVICE` | `cuda` | Inference device (`cuda` / `cpu`) |
+| `VLLM_API_URL` | `http://localhost:8000` | Base URL of the vLLM server |
+| `MODEL_NAME` | `Qwen/Qwen2.5-VL-7B-Instruct` | Model ID served by vLLM |
+| `VLLM_API_KEY` | `not-required` | API key (if vLLM auth is enabled) |
+| `MOCK_MODE` | `false` | Force mock mode (skip vLLM calls) |
 | `MAX_NEW_TOKENS` | `512` | Max tokens to generate |
 | `TEMPERATURE` | `0.2` | Sampling temperature |
-| `HF_TOKEN` | _(empty)_ | HF auth token for gated models |
+
+> **HF Space secret:** set `VLLM_API_URL` in the Space settings → *Repository secrets* so the Gradio app can reach your AMD VM.
 
 ---
 
@@ -177,4 +208,4 @@ MediVision is a **demonstration prototype** built for the AMD Developer Hackatho
 
 ---
 
-*Built with ❤️ on AMD ROCm · AMD Developer Hackathon 2026*
+*Built with ❤️ on AMD ROCm · AMD Developer Cloud · AMD Developer Hackathon 2026*

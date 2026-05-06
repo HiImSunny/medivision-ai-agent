@@ -1,89 +1,77 @@
+"""
+Inference backend: calls the vLLM server on AMD Developer Cloud via the
+OpenAI-compatible API.  No local model weights are loaded here.
+"""
+import base64
+import mimetypes
 import os
-from src.config import MODEL_NAME, DEVICE, MAX_NEW_TOKENS, TEMPERATURE, HF_TOKEN
+
 import src.config as config
 
-_model = None
-_processor = None
+# Lazy singleton — created on first call to generate_response()
+_client = None
 
 
-def _try_load_real_model():
-    """Attempt to load Qwen-VL-Chat via transformers + optimum[amd]."""
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from PIL import Image
-
-    print(f"[ModelLoader] Loading {MODEL_NAME} on device '{DEVICE}'...")
-    kwargs = {
-        "trust_remote_code": True,
-        "torch_dtype": torch.float16,
-    }
-    if HF_TOKEN:
-        kwargs["token"] = HF_TOKEN
-
-    # Load tokenizer (Qwen-VL uses AutoTokenizer)
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
-
-    model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, **kwargs)
-    device = torch.device(DEVICE if torch.cuda.is_available() else "cpu")
-    model = model.to(device)
-    model.eval()
-
-    print(f"[ModelLoader] Model loaded on {device}.")
-    return model, tokenizer
+def _get_client():
+    global _client
+    if _client is None:
+        from openai import OpenAI
+        _client = OpenAI(
+            base_url=f"{config.VLLM_API_URL}/v1",
+            api_key=os.environ.get("VLLM_API_KEY", "not-required"),
+        )
+    return _client
 
 
-def get_model_and_processor():
-    global _model, _processor
+def _encode_image(image_path: str) -> tuple[str, str]:
+    """Return (base64_data, mime_type) for an image file."""
+    mime_type, _ = mimetypes.guess_type(image_path)
+    if not mime_type:
+        mime_type = "image/jpeg"
+    with open(image_path, "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    return data, mime_type
 
-    if _model is not None:
-        return _model, _processor
 
+def generate_response(prompt: str, image_path: str = None) -> str | None:
+    """
+    Send a request to the vLLM endpoint and return the model's text output.
+    Returns None when MOCK_MODE is active so callers fall back to mock logic.
+    """
     if config.MOCK_MODE:
-        print("[ModelLoader] MOCK_MODE=True — skipping real model load.")
-        return None, None
+        return None
 
     try:
-        _model, _processor = _try_load_real_model()
-    except Exception as exc:
-        print(f"[ModelLoader] Real model load failed ({exc}). Enabling MOCK_MODE.")
-        config.MOCK_MODE = True
-        _model, _processor = None, None
+        client = _get_client()
 
-    return _model, _processor
+        if image_path:
+            b64, mime = _encode_image(image_path)
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mime};base64,{b64}",
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
+        else:
+            messages = [{"role": "user", "content": prompt}]
 
-
-def generate_response(prompt: str, image_path: str = None) -> str:
-    """
-    Run inference with the loaded model, or return a sentinel for mock mode.
-    Returns None when in mock mode so callers can use their own mock logic.
-    """
-    import torch
-    from PIL import Image
-
-    model, tokenizer = get_model_and_processor()
-    if model is None:
-        return None  # caller handles mock
-
-    device = next(model.parameters()).device
-
-    if image_path:
-        query = tokenizer.from_list_format([
-            {"image": image_path},
-            {"text": prompt},
-        ])
-    else:
-        query = prompt
-
-    inputs = tokenizer(query, return_tensors="pt").to(device)
-
-    with torch.no_grad():
-        output_ids = model.generate(
-            **inputs,
-            max_new_tokens=MAX_NEW_TOKENS,
-            temperature=TEMPERATURE,
-            do_sample=TEMPERATURE > 0,
+        response = client.chat.completions.create(
+            model=config.MODEL_NAME,
+            messages=messages,
+            max_tokens=config.MAX_NEW_TOKENS,
+            temperature=config.TEMPERATURE,
         )
+        return response.choices[0].message.content
 
-    # Decode only the newly generated tokens
-    generated = output_ids[0][inputs["input_ids"].shape[-1]:]
-    return tokenizer.decode(generated, skip_special_tokens=True)
+    except Exception as exc:
+        print(f"[ModelLoader] vLLM call failed ({exc}). Falling back to mock mode.")
+        config.MOCK_MODE = True
+        return None

@@ -1,13 +1,7 @@
 from src.agent import analyze_image_and_text
-import src.config as config
 
 
 class MediVisionPipeline:
-    def __init__(self):
-        # Eagerly trigger model load (or mock detection) at startup.
-        from src.model_loader import get_model_and_processor
-        get_model_and_processor()
-
     def process(self, image_path, symptoms: str, lang: str = "en") -> dict:
         """
         Run the full analysis pipeline.
