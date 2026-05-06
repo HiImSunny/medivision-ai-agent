@@ -790,7 +790,7 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
         # ── Main content ──────────────────────────────────────────────────────────
         with gr.Row(equal_height=False):
 
-        with gr.Column(scale=1, min_width=300):
+          with gr.Column(scale=1, min_width=300):
             input_img = gr.Image(
                 type="filepath",
                 label="Upload Medical Image",
@@ -830,7 +830,7 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 label="Quick Examples",
             )
 
-        with gr.Column(scale=1, min_width=340):
+          with gr.Column(scale=1, min_width=340):
             output_html = gr.HTML(
                 value=_empty_output_html("en"),
                 label="Analysis Result",
