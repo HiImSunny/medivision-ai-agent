@@ -1,5 +1,5 @@
 ---
-title: MediVision — Multimodal Medical Imaging AI Agent
+title: MediVision — Dermatology & Wound Care AI Assistant
 emoji: 🩺
 colorFrom: red
 colorTo: gray
@@ -10,7 +10,7 @@ pinned: true
 license: mit
 ---
 
-# MediVision — Multimodal Medical Imaging AI Agent
+# MediVision — Dermatology & Wound Care AI Assistant
 
 > **AMD Developer Hackathon 2026 · Track 3: Vision & Multimodal AI**
 
@@ -18,7 +18,7 @@ license: mit
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Powered by AMD](https://img.shields.io/badge/Powered%20by-AMD%20MI300X%20%2B%20ROCm-ED1C24)](https://www.amd.com/en/products/accelerators/instinct/mi300.html)
 
-MediVision is a **multilingual** multimodal AI assistant that analyzes skin wound and disease images combined with patient symptom descriptions. It supports **English, Tiếng Việt, 中文, Español, Français, and 日本語** — every output (diagnosis, severity, actions, disclaimer) is delivered natively in the selected language. Inference is served by a **vLLM server running on AMD Developer Cloud** (AMD Instinct™ MI300X + ROCm), and the lightweight Gradio frontend on Hugging Face Spaces simply calls that API — no model weights are loaded in the Space itself.
+MediVision is a **multilingual** AI assistant specialized in dermatology and wound care — it analyzes skin condition images combined with patient symptom descriptions. It supports **English, Tiếng Việt, 中文, Español, Français, and 日本語** — every output (diagnosis, severity, actions, disclaimer) is delivered natively in the selected language. Inference is served by a **vLLM server running on AMD Developer Cloud** (AMD Instinct™ MI300X + ROCm), and the lightweight Gradio frontend on Hugging Face Spaces simply calls that API — no model weights are loaded in the Space itself.
 
 ---
 
@@ -51,7 +51,7 @@ on the AMD GPU server.
 
 ## Features
 
-- **Multimodal Analysis** — Combines skin image + freeform symptom text for richer diagnosis suggestions.
+- **Multimodal Analysis** — Combines skin/wound image + freeform symptom text for richer dermatology diagnosis suggestions.
 - **Multilingual** — Full support for 6 languages: English, Tiếng Việt, 中文 (Chinese), Español, Français, and 日本語 (Japanese). All output — diagnosis, severity, recommendations, and disclaimer — is rendered natively in the selected language.
 - **Structured Output** — Every analysis returns:
   - Diagnosis suggestion

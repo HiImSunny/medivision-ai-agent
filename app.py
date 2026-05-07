@@ -834,7 +834,7 @@ HEADER_HTML = """
     <span style='color:#ED1C24;'>Medi</span><span style='color:#f9fafb;'>Vision</span>
   </div>
   <div style='color:#9ca3af; font-size:0.9rem; margin-top:4px;'>
-    Multilingual Multimodal Medical Imaging AI Agent
+    Multilingual Dermatology &amp; Wound Care AI Assistant
   </div>
   <div style='margin-top:10px; display:inline-flex; gap:8px; flex-wrap:wrap; justify-content:center;'>
     <span style='background:#1f2937; color:#ED1C24; font-size:0.72rem; font-weight:700;
@@ -886,7 +886,7 @@ FOOTER_HTML = """
 </script>
 """
 
-with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X") as demo:
+with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — Dermatology & Wound Care AI") as demo:
 
     gr.HTML(HEADER_HTML)
 
