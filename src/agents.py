@@ -66,5 +66,12 @@ def format_agent(clinical_json: dict, visual_description: str,
     if "===SOAP===" in raw:
         patient_msg, soap = raw.split("===SOAP===", 1)
     else:
-        patient_msg, soap = raw, ""
+        # Fallback: if LLM ignored the delimiter, try to split at first SOAP field
+        import re as _re
+        m = _re.search(r'\n\s*S\s*\(Subjective\)', raw)
+        if m:
+            patient_msg = raw[:m.start()]
+            soap = raw[m.start():].lstrip()
+        else:
+            patient_msg, soap = raw, ""
     return patient_msg.strip(), soap.strip(), metrics
