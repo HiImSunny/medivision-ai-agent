@@ -55,6 +55,11 @@ _I18N = {
         "metrics_tokens":         "tokens",
         "region_label":           "Affected Body Region",
         "region_none":            "Not specified",
+        "region_optional_label":  "Affected Body Region (Optional)",
+        "input_hint":             "Provide an image, describe symptoms, or both — at least one is required. Body region is optional.",
+        "map_label":              "Anatomical Map",
+        "map_select":             "click to select",
+        "map_selected":           "{n} region(s) selected",
     },
     "vn": {
         "img_label":              "Tải lên hình ảnh y tế",
@@ -79,6 +84,11 @@ _I18N = {
         "metrics_tokens":         "token",
         "region_label":           "Vùng cơ thể bị ảnh hưởng",
         "region_none":            "Không xác định",
+        "region_optional_label":  "Vùng cơ thể bị ảnh hưởng (Không bắt buộc)",
+        "input_hint":             "Cung cấp ảnh, mô tả triệu chứng hoặc cả hai — cần ít nhất một trong hai. Vùng cơ thể là tùy chọn.",
+        "map_label":              "Bản đồ giải phẫu",
+        "map_select":             "nhấn để chọn",
+        "map_selected":           "{n} vùng đã chọn",
     },
     "zh": {
         "img_label":              "上传医学图像",
@@ -103,6 +113,11 @@ _I18N = {
         "metrics_tokens":         "tokens",
         "region_label":           "受影响的身体部位",
         "region_none":            "未指定",
+        "region_optional_label":  "受影响的身体部位（可选）",
+        "input_hint":             "请上传图片或描述症状（至少提供其中一项）。身体部位为可选项。",
+        "map_label":              "解剖图",
+        "map_select":             "点击选择",
+        "map_selected":           "已选 {n} 个部位",
     },
     "es": {
         "img_label":              "Subir imagen médica",
@@ -127,6 +142,11 @@ _I18N = {
         "metrics_tokens":         "tokens",
         "region_label":           "Región corporal afectada",
         "region_none":            "No especificado",
+        "region_optional_label":  "Región corporal afectada (Opcional)",
+        "input_hint":             "Suba una imagen, describa síntomas, o ambos — se requiere al menos uno. La región corporal es opcional.",
+        "map_label":              "Mapa anatómico",
+        "map_select":             "haga clic para seleccionar",
+        "map_selected":           "{n} región(es) seleccionada(s)",
     },
     "fr": {
         "img_label":              "Télécharger une image médicale",
@@ -151,6 +171,11 @@ _I18N = {
         "metrics_tokens":         "tokens",
         "region_label":           "Région corporelle affectée",
         "region_none":            "Non spécifié",
+        "region_optional_label":  "Région corporelle affectée (Facultatif)",
+        "input_hint":             "Fournissez une image, décrivez vos symptômes, ou les deux — au moins un est requis. La région corporelle est facultative.",
+        "map_label":              "Carte anatomique",
+        "map_select":             "cliquer pour sélectionner",
+        "map_selected":           "{n} région(s) sélectionnée(s)",
     },
     "ja": {
         "img_label":              "医療画像をアップロード",
@@ -175,6 +200,11 @@ _I18N = {
         "metrics_tokens":         "トークン",
         "region_label":           "患部の体の部位",
         "region_none":            "指定なし",
+        "region_optional_label":  "患部の体の部位（任意）",
+        "input_hint":             "画像または症状（あるいは両方）を入力してください — どちらか一方が必要です。体の部位は任意です。",
+        "map_label":              "解剖マップ",
+        "map_select":             "クリックして選択",
+        "map_selected":           "{n} 部位選択中",
     },
 }
 
@@ -309,7 +339,8 @@ _DIM   = "#374151"   # default fill
 _HI    = "#ED1C24"   # highlighted fill
 
 
-def _body_map_svg(selected: list) -> str:
+def _body_map_svg(selected: list, lang: str = "en") -> str:
+    t = _I18N.get(lang, _I18N["en"])
     active = set()
     for r in (selected or []):
         for sid in _REGION_SHAPE_MAP.get(r, []):
@@ -324,11 +355,29 @@ def _body_map_svg(selected: list) -> str:
     def glow(sid):
         return "drop-shadow(0 0 3px #ED1C24)" if sid in active else "none"
 
+    # Build svg_id → localized name for <title> tooltips
+    locs = _REGION_TRANSLATIONS.get(lang, _REGION_TRANSLATIONS["en"])
+    _svg_title: dict[str, str] = {}
+    for en_name, svg_ids in _REGION_SHAPE_MAP.items():
+        loc_name = locs[_BODY_REGIONS.index(en_name)] if en_name in _BODY_REGIONS else en_name
+        for sid in svg_ids:
+            _svg_title[sid] = loc_name
+
+    def title(sid):
+        return f"<title>{_svg_title.get(sid, sid)}</title>"
+
+    counter_html = (
+        f'<div style="font-size:0.58rem; color:#ED1C24; font-family:monospace; font-weight:600;">'
+        f'{t["map_selected"].format(n=len(active))}</div>'
+        if active else
+        f'<div style="font-size:0.58rem; color:#4b5563; font-family:monospace;">{t["map_select"]}</div>'
+    )
+
     return f"""
 <div style='display:flex; flex-direction:column; align-items:center; gap:6px;
             padding:8px 4px; user-select:none;'>
   <div style='font-size:0.58rem; color:#64748b; font-family:monospace;
-              letter-spacing:0.06em; text-transform:uppercase;'>Anatomical Map</div>
+              letter-spacing:0.06em; text-transform:uppercase;'>{t["map_label"]}</div>
   <svg viewBox="0 0 80 180" width="76" height="170"
        xmlns="http://www.w3.org/2000/svg" style='overflow:visible;'>
     <style>
@@ -338,65 +387,65 @@ def _body_map_svg(selected: list) -> str:
     <!-- Head -->
     <ellipse class="bpart" id="svg-head" cx="40" cy="13" rx="11" ry="12"
              fill="{f('svg-head')}" stroke="{stroke('svg-head')}" stroke-width="0.8"
-             style="filter:{glow('svg-head')}"/>
+             style="filter:{glow('svg-head')}">{title('svg-head')}</ellipse>
     <!-- Neck -->
     <rect class="bpart" id="svg-neck" x="35" y="24" width="10" height="8" rx="2"
           fill="{f('svg-neck')}" stroke="{stroke('svg-neck')}" stroke-width="0.8"
-          style="filter:{glow('svg-neck')}"/>
+          style="filter:{glow('svg-neck')}">{title('svg-neck')}</rect>
     <!-- Chest -->
     <rect class="bpart" id="svg-chest" x="22" y="32" width="36" height="22" rx="4"
           fill="{f('svg-chest')}" stroke="{stroke('svg-chest')}" stroke-width="0.8"
-          style="filter:{glow('svg-chest')}"/>
+          style="filter:{glow('svg-chest')}">{title('svg-chest')}</rect>
     <!-- Abdomen -->
     <rect class="bpart" id="svg-abdomen" x="22" y="55" width="36" height="20" rx="4"
           fill="{f('svg-abdomen')}" stroke="{stroke('svg-abdomen')}" stroke-width="0.8"
-          style="filter:{glow('svg-abdomen')}"/>
+          style="filter:{glow('svg-abdomen')}">{title('svg-abdomen')}</rect>
     <!-- Upper Back (overlay stripe) -->
     <rect class="bpart" id="svg-upper-back" x="22" y="32" width="36" height="11" rx="4"
           fill="{'#ED1C24' if 'svg-upper-back' in active else 'none'}" opacity="0.45"
-          stroke="{'#ED1C24' if 'svg-upper-back' in active else 'none'}" stroke-width="0.6"/>
+          stroke="{'#ED1C24' if 'svg-upper-back' in active else 'none'}" stroke-width="0.6">{title('svg-upper-back')}</rect>
     <!-- Lower Back (overlay stripe) -->
     <rect class="bpart" id="svg-lower-back" x="22" y="55" width="36" height="10" rx="4"
           fill="{'#ED1C24' if 'svg-lower-back' in active else 'none'}" opacity="0.45"
-          stroke="{'#ED1C24' if 'svg-lower-back' in active else 'none'}" stroke-width="0.6"/>
+          stroke="{'#ED1C24' if 'svg-lower-back' in active else 'none'}" stroke-width="0.6">{title('svg-lower-back')}</rect>
     <!-- Arms -->
     <rect class="bpart" id="svg-left-arm" x="7" y="32" width="13" height="38" rx="5"
           fill="{f('svg-left-arm')}" stroke="{stroke('svg-left-arm')}" stroke-width="0.8"
-          style="filter:{glow('svg-left-arm')}"/>
+          style="filter:{glow('svg-left-arm')}">{title('svg-left-arm')}</rect>
     <rect class="bpart" id="svg-right-arm" x="60" y="32" width="13" height="38" rx="5"
           fill="{f('svg-right-arm')}" stroke="{stroke('svg-right-arm')}" stroke-width="0.8"
-          style="filter:{glow('svg-right-arm')}"/>
+          style="filter:{glow('svg-right-arm')}">{title('svg-right-arm')}</rect>
     <!-- Hands -->
     <ellipse class="bpart" id="svg-left-hand" cx="13" cy="76" rx="7" ry="5"
              fill="{f('svg-left-hand')}" stroke="{stroke('svg-left-hand')}" stroke-width="0.8"
-             style="filter:{glow('svg-left-hand')}"/>
+             style="filter:{glow('svg-left-hand')}">{title('svg-left-hand')}</ellipse>
     <ellipse class="bpart" id="svg-right-hand" cx="67" cy="76" rx="7" ry="5"
              fill="{f('svg-right-hand')}" stroke="{stroke('svg-right-hand')}" stroke-width="0.8"
-             style="filter:{glow('svg-right-hand')}"/>
+             style="filter:{glow('svg-right-hand')}">{title('svg-right-hand')}</ellipse>
     <!-- Groin -->
     <rect class="bpart" id="svg-groin" x="27" y="76" width="26" height="8" rx="3"
           fill="{f('svg-groin')}" stroke="{stroke('svg-groin')}" stroke-width="0.8"
-          style="filter:{glow('svg-groin')}"/>
+          style="filter:{glow('svg-groin')}">{title('svg-groin')}</rect>
     <!-- Buttocks overlay -->
     <rect class="bpart" id="svg-buttocks" x="27" y="76" width="26" height="8" rx="3"
           fill="{'#ED1C24' if 'svg-buttocks' in active else 'none'}" opacity="0.55"
-          stroke="{'#ED1C24' if 'svg-buttocks' in active else 'none'}" stroke-width="0.6"/>
+          stroke="{'#ED1C24' if 'svg-buttocks' in active else 'none'}" stroke-width="0.6">{title('svg-buttocks')}</rect>
     <!-- Legs -->
     <rect class="bpart" id="svg-left-leg" x="22" y="85" width="15" height="52" rx="5"
           fill="{f('svg-left-leg')}" stroke="{stroke('svg-left-leg')}" stroke-width="0.8"
-          style="filter:{glow('svg-left-leg')}"/>
+          style="filter:{glow('svg-left-leg')}">{title('svg-left-leg')}</rect>
     <rect class="bpart" id="svg-right-leg" x="43" y="85" width="15" height="52" rx="5"
           fill="{f('svg-right-leg')}" stroke="{stroke('svg-right-leg')}" stroke-width="0.8"
-          style="filter:{glow('svg-right-leg')}"/>
+          style="filter:{glow('svg-right-leg')}">{title('svg-right-leg')}</rect>
     <!-- Feet -->
     <ellipse class="bpart" id="svg-left-foot" cx="29" cy="142" rx="10" ry="5"
              fill="{f('svg-left-foot')}" stroke="{stroke('svg-left-foot')}" stroke-width="0.8"
-             style="filter:{glow('svg-left-foot')}"/>
+             style="filter:{glow('svg-left-foot')}">{title('svg-left-foot')}</ellipse>
     <ellipse class="bpart" id="svg-right-foot" cx="51" cy="142" rx="10" ry="5"
              fill="{f('svg-right-foot')}" stroke="{stroke('svg-right-foot')}" stroke-width="0.8"
-             style="filter:{glow('svg-right-foot')}"/>
+             style="filter:{glow('svg-right-foot')}">{title('svg-right-foot')}</ellipse>
   </svg>
-  {'<div style="font-size:0.58rem; color:#ED1C24; font-family:monospace; font-weight:600;">' + str(len(active)) + ' region(s) selected</div>' if active else '<div style="font-size:0.58rem; color:#4b5563; font-family:monospace;">select region(s)</div>'}
+  {counter_html}
 </div>
 """
 
@@ -552,7 +601,7 @@ def _error_html(t: dict, exc: Exception) -> str:
 
 
 def _ui_updates(lang_choice: str, current_regions=None):
-    """Return gr.update() for the 4 translatable input-area components (no output_html)."""
+    """Return gr.update() for the 5 translatable input-area components (no output_html)."""
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
     new_choices = _localized_regions(lang)
@@ -562,11 +611,15 @@ def _ui_updates(lang_choice: str, current_regions=None):
         en = _display_to_en(r)
         if en in _BODY_REGIONS:
             translated.append(new_choices[_BODY_REGIONS.index(en)])
+    hint_html = (
+        f"<p style='font-size:0.75rem; color:#6b7280; margin:4px 0 10px;'>{t['input_hint']}</p>"
+    )
     return (
         gr.update(label=t["img_label"]),
         gr.update(label=t["symptoms_label"], placeholder=t["symptoms_placeholder"]),
         gr.update(value=t["analyze_btn"]),
-        gr.update(label=t["region_label"], choices=new_choices, value=translated),
+        gr.update(label=t["region_optional_label"], choices=new_choices, value=translated),
+        gr.update(value=hint_html),
     )
 
 
@@ -580,12 +633,13 @@ def _regions_to_prompt(selected) -> str:
     return ", ".join(r for r in en_regions if r)
 
 
-def on_region_change(selected):
+def on_region_change(selected, lang_choice: str = "English"):
     """Re-render the body map SVG when selection changes (map display→EN first)."""
     if isinstance(selected, str):
         selected = [selected]
     en_keys = [_display_to_en(r) for r in (selected or [])]
-    return _body_map_svg(en_keys)
+    lang = _LANG_MAP.get(lang_choice, "en")
+    return _body_map_svg(en_keys, lang)
 
 
 def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
@@ -610,13 +664,13 @@ def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
         current.append(clicked_display)
 
     new_en = [_display_to_en(r) for r in current]
-    return current, _body_map_svg(new_en)
+    return current, _body_map_svg(new_en, lang)
 
 
 def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
-    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_choice, current_regions=selected_regions)
+    img_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(lang_choice, current_regions=selected_regions)
 
     region = _regions_to_prompt(selected_regions)
 
@@ -630,16 +684,16 @@ def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
     else:
         out_upd = _empty_output_html(lang)
 
-    return img_upd, sym_upd, btn_upd, region_upd, out_upd, get_backend_status_html(lang)
+    return img_upd, sym_upd, btn_upd, region_upd, hint_upd, out_upd, get_backend_status_html(lang)
 
 
 def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    img_upd, sym_upd, btn_upd, region_upd = _ui_updates(lang_display, current_regions=[])
+    img_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(lang_display, current_regions=[])
     lang = _LANG_MAP.get(lang_display, "en")
-    return lang_display, img_upd, sym_upd, btn_upd, region_upd, _body_map_svg([]), _empty_output_html(lang), get_backend_status_html(lang)
+    return lang_display, img_upd, sym_upd, btn_upd, region_upd, hint_upd, _body_map_svg([], lang), _empty_output_html(lang), get_backend_status_html(lang)
 
 
 # ---------------------------------------------------------------------------
@@ -767,39 +821,6 @@ footer { display: none !important; }
     .gr-samples thead, .gr-samples-table thead { display: none !important; }
 }
 
-/* ── AMD loading overlay ── */
-#amd-loading-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(3,7,18,0.82);
-    backdrop-filter: blur(4px);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 20px;
-}
-#amd-loading-overlay.active { display: flex !important; }
-.amd-spinner {
-    width: 52px; height: 52px;
-    border: 4px solid #1f2937;
-    border-top-color: #ED1C24;
-    border-radius: 50%;
-    animation: amd-spin 0.8s linear infinite;
-}
-@keyframes amd-spin { to { transform: rotate(360deg); } }
-.amd-step-bar {
-    display: flex; gap: 10px; align-items: center;
-}
-.amd-step {
-    font-size: 0.72rem; font-family: monospace;
-    color: #4b5563; transition: color 0.3s;
-    display: flex; align-items: center; gap: 4px;
-}
-.amd-step.active { color: #ED1C24; font-weight: 700; }
-.amd-step.done   { color: #22c55e; }
-.amd-step-sep    { color: #1f2937; font-size: 0.7rem; }
 
 """
 
@@ -844,83 +865,23 @@ FOOTER_HTML = """
   </span>
 </div>
 
-<!-- AMD Loading Overlay -->
-<div id='amd-loading-overlay' role='status' aria-live='polite' aria-label='Analyzing with AMD MI300X'>
-  <div class='amd-spinner'></div>
-  <div style='font-size:0.9rem; font-weight:700; color:#f9fafb; letter-spacing:0.04em;'>
-    Analyzing with AMD MI300X&hellip;
-  </div>
-  <div class='amd-step-bar'>
-    <span class='amd-step' id='step-vision'>&#9632; Vision Encode</span>
-    <span class='amd-step-sep'>›</span>
-    <span class='amd-step' id='step-llm'>&#9632; LLM Inference</span>
-    <span class='amd-step-sep'>›</span>
-    <span class='amd-step' id='step-parse'>&#9632; Parse Result</span>
-  </div>
-  <div style='font-size:0.65rem; color:#4b5563; font-family:monospace;'>
-    ROCm · Qwen2.5-VL-7B · AMD Dev Cloud
-  </div>
-</div>
-
 <script>
 (function() {
-  /* ── AMD loading overlay ── */
-  var overlay   = document.getElementById('amd-loading-overlay');
-  var stepIds   = ['step-vision','step-llm','step-parse'];
-  var stepTimer = null;
-
-  function resetSteps() {
-    stepIds.forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.className = 'amd-step';
-    });
-  }
-  function animateSteps() {
-    var idx = 0;
-    resetSteps();
-    stepTimer = setInterval(function() {
-      if (idx > 0) {
-        var prev = document.getElementById(stepIds[idx - 1]);
-        if (prev) prev.className = 'amd-step done';
-      }
-      var cur = document.getElementById(stepIds[idx]);
-      if (cur) cur.className = 'amd-step active';
-      idx++;
-      if (idx >= stepIds.length) clearInterval(stepTimer);
-    }, 900);
-  }
-
-  /* Called from Gradio .click(js=) before submit */
-  window.amdShowOverlay = function() {
-    overlay.classList.add('active');
-    animateSteps();
-  };
-  /* Called from Gradio .then(js=) after Python returns */
-  window.amdHideOverlay = function() {
-    overlay.classList.remove('active');
-    clearInterval(stepTimer);
-    resetSteps();
-  };
-
   /* ── SVG body-map click → dispatch to hidden bridge input ── */
-  function setupSvgClicks() {
-    document.addEventListener('click', function(e) {
-      var el = e.target.closest('.bpart');
-      if (!el) return;
-      var svgId = el.id;
-      if (!svgId) return;
-      /* Find the hidden bridge textbox and set its value, then trigger input event */
-      var bridge = document.getElementById('svg-click-bridge');
-      if (!bridge) return;
-      var input = bridge.querySelector('input, textarea');
-      if (!input) return;
-      var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-                           || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-      nativeInputSetter.call(input, svgId);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-  }
-  setupSvgClicks();
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('.bpart');
+    if (!el) return;
+    var svgId = el.id;
+    if (!svgId) return;
+    var bridge = document.getElementById('svg-click-bridge');
+    if (!bridge) return;
+    var input = bridge.querySelector('input, textarea');
+    if (!input) return;
+    var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+                         || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    nativeInputSetter.call(input, svgId);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
 })();
 </script>
 """
@@ -964,6 +925,12 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 lines=4,
             )
 
+            input_hint_html = gr.HTML(
+                value="<p style='font-size:0.75rem; color:#6b7280; margin:4px 0 10px;'>"
+                      f"{_I18N['en']['input_hint']}</p>",
+                elem_id="input-hint",
+            )
+
             with gr.Row(equal_height=True):
                 with gr.Column(scale=0, min_width=80):
                     body_map_html = gr.HTML(value=_body_map_svg([]))
@@ -976,7 +943,7 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                         container=True,
                     )
 
-            submit_btn = gr.Button("🔬  Analyze", variant="primary", size="lg")
+            submit_btn = gr.Button("🔬  Analyze", variant="primary", size="lg", elem_id="analyze-btn")
 
             gr.Examples(
                 examples=[
@@ -1010,34 +977,27 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
     # Dropdown change → re-render SVG (keeps sync when user edits dropdown directly)
     region_selector.change(
         fn=on_region_change,
-        inputs=[region_selector],
+        inputs=[region_selector, lang_radio],
         outputs=[body_map_html],
     )
 
     lang_radio.change(
         fn=on_lang_change,
         inputs=[lang_radio, input_img, symptoms_txt, region_selector],
-        outputs=[input_img, symptoms_txt, submit_btn, region_selector, output_html, status_bar],
+        outputs=[input_img, symptoms_txt, submit_btn, region_selector, input_hint_html, output_html, status_bar],
     )
 
-    # Show overlay before submit, hide immediately after Python returns
     submit_btn.click(
-        fn=None,
-        js="() => window.amdShowOverlay()",
-    ).then(
         fn=predict,
         inputs=[input_img, symptoms_txt, lang_radio, region_selector],
         outputs=[output_html, status_bar],
         api_name="analyze",
-    ).then(
-        fn=None,
-        js="() => window.amdHideOverlay()",
     )
 
     demo.load(
         fn=on_load,
         inputs=[],
-        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, body_map_html, output_html, status_bar],
+        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, input_hint_html, body_map_html, output_html, status_bar],
     )
 
     gr.HTML(FOOTER_HTML)
