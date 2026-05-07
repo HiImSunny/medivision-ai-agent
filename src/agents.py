@@ -2,7 +2,7 @@ import json
 import re
 
 from src.model_loader import generate_response, generate_text
-from src.prompts import VISION_AGENT_SYSTEM, CLINICAL_AGENT_SYSTEM, PATIENT_AGENT_SYSTEM, SOAP_AGENT_SYSTEM
+from src.prompts import VISION_AGENT_SYSTEM, CLINICAL_AGENT_SYSTEM, PATIENT_AGENT_SYSTEM, SOAP_AGENT_SYSTEM, CHAT_AGENT_SYSTEM
 
 _LANG_NAMES = {
     "en": "English",
@@ -49,6 +49,30 @@ def clinical_agent(visual_description: str, symptoms: str) -> tuple[dict, dict]:
         "clinical_assessment": data.get("clinical_assessment", ""),
         "recommendation":      data.get("recommendation", ""),
     }, metrics
+
+
+def chat_agent(question: str, context: dict, history: list, lang: str) -> tuple[str, dict]:
+    """Follow-up Q&A. Returns (answer_text, metrics)."""
+    lang_name = _LANG_NAMES.get(lang, "English")
+    ctx_block = (
+        f"ANALYSIS CONTEXT:\n"
+        f"- Visual description: {context.get('visual_description', '(none)')}\n"
+        f"- Possible conditions: {', '.join(context.get('possible_conditions', []))}\n"
+        f"- Triage level: {context.get('triage_level', 'Low')}\n"
+        f"- Patient message given: {context.get('patient_message', '(none)')}"
+    )
+    history_block = ""
+    for user_msg, bot_msg in (history or []):
+        history_block += f"\nPatient: {user_msg}\nAssistant: {bot_msg}"
+    prompt = (
+        CHAT_AGENT_SYSTEM + "\n\n"
+        f"TARGET LANGUAGE: {lang_name}\n\n"
+        f"{ctx_block}\n"
+        f"{history_block}\n\n"
+        f"Patient: {question}\nAssistant:"
+    )
+    answer, metrics = generate_text(prompt)
+    return answer.strip(), metrics
 
 
 def format_agent(clinical_json: dict, visual_description: str,

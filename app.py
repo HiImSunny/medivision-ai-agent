@@ -31,6 +31,11 @@ _LANG_MAP = {
 
 _LANG_CHOICES = list(_LANG_MAP.keys())
 
+_LANG_BCP47 = {
+    "en": "en-US", "vn": "vi-VN", "zh": "zh-CN",
+    "es": "es-ES", "fr": "fr-FR", "ja": "ja-JP",
+}
+
 _I18N = {
     "en": {
         "img_label":              "Upload Medical Image",
@@ -71,6 +76,10 @@ _I18N = {
         "conditions_label":       "Possible Conditions",
         "soap_copy_btn":          "Copy SOAP Note",
         "soap_empty":             "Run an analysis to generate the SOAP note.",
+        "tts_btn":                "🔊 Listen",
+        "chat_label":             "Follow-up Questions",
+        "chat_placeholder":       "Ask a follow-up question about your condition...",
+        "chat_send":              "Send",
     },
     "vn": {
         "img_label":              "Tải lên hình ảnh y tế",
@@ -111,6 +120,10 @@ _I18N = {
         "conditions_label":       "Tình trạng có thể",
         "soap_copy_btn":          "Sao chép SOAP",
         "soap_empty":             "Thực hiện phân tích để tạo ghi chú SOAP.",
+        "tts_btn":                "🔊 Nghe",
+        "chat_label":             "Câu hỏi tiếp theo",
+        "chat_placeholder":       "Đặt câu hỏi tiếp theo về tình trạng của bạn...",
+        "chat_send":              "Gửi",
     },
     "zh": {
         "img_label":              "上传医学图像",
@@ -151,6 +164,10 @@ _I18N = {
         "conditions_label":       "可能的病症",
         "soap_copy_btn":          "复制SOAP记录",
         "soap_empty":             "运行分析以生成SOAP记录。",
+        "tts_btn":                "🔊 朗读",
+        "chat_label":             "后续问题",
+        "chat_placeholder":       "就您的病情提出后续问题...",
+        "chat_send":              "发送",
     },
     "es": {
         "img_label":              "Subir imagen médica",
@@ -191,6 +208,10 @@ _I18N = {
         "conditions_label":       "Posibles condiciones",
         "soap_copy_btn":          "Copiar nota SOAP",
         "soap_empty":             "Ejecute un análisis para generar la nota SOAP.",
+        "tts_btn":                "🔊 Escuchar",
+        "chat_label":             "Preguntas de seguimiento",
+        "chat_placeholder":       "Haga una pregunta de seguimiento sobre su condición...",
+        "chat_send":              "Enviar",
     },
     "fr": {
         "img_label":              "Télécharger une image médicale",
@@ -231,6 +252,10 @@ _I18N = {
         "conditions_label":       "Conditions possibles",
         "soap_copy_btn":          "Copier la note SOAP",
         "soap_empty":             "Lancez une analyse pour générer la note SOAP.",
+        "tts_btn":                "🔊 Écouter",
+        "chat_label":             "Questions de suivi",
+        "chat_placeholder":       "Posez une question de suivi sur votre état...",
+        "chat_send":              "Envoyer",
     },
     "ja": {
         "img_label":              "医療画像をアップロード",
@@ -271,6 +296,10 @@ _I18N = {
         "conditions_label":       "考えられる疾患",
         "soap_copy_btn":          "SOAPノートをコピー",
         "soap_empty":             "分析を実行してSOAPノートを生成します。",
+        "tts_btn":                "🔊 読み上げ",
+        "chat_label":             "フォローアップの質問",
+        "chat_placeholder":       "症状についてフォローアップの質問をしてください...",
+        "chat_send":              "送信",
     },
 }
 
@@ -591,6 +620,7 @@ def _build_result_html(result: dict, lang: str) -> str:
     patient_msg   = result.get("patient_message", "")
     conditions    = result.get("possible_conditions", [])
     metrics       = result.get("_metrics", {})
+    bcp47         = _LANG_BCP47.get(lang, "en-US")
 
     backend_tag = (
         "<span style='font-size:0.7rem; background:#052e16; color:#86efac; "
@@ -663,8 +693,29 @@ def _build_result_html(result: dict, lang: str) -> str:
   </div>
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
-    <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;
-                color:#9ca3af; margin-bottom:8px;'>{t['actions_label']}</div>
+    <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;'>
+      <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af;'>
+        {t['actions_label']}
+      </div>
+      <button
+        data-text="{patient_msg.replace(chr(34), '&quot;').replace(chr(10), ' ').strip()}"
+        data-lang="{bcp47}"
+        data-play-label="{t['tts_btn']}"
+        onclick="(function(btn){{
+          var s=window.speechSynthesis;
+          if(s.speaking){{s.cancel();btn.textContent=btn.dataset.playLabel;return;}}
+          var u=new SpeechSynthesisUtterance(btn.dataset.text);
+          u.lang=btn.dataset.lang;
+          u.onend=function(){{btn.textContent=btn.dataset.playLabel;}};
+          u.onerror=function(){{btn.textContent=btn.dataset.playLabel;}};
+          btn.textContent='⏹ Stop';
+          s.speak(u);
+        }})(this)"
+        style='background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; border-radius:6px;
+               padding:4px 12px; cursor:pointer; font-size:0.72rem; white-space:nowrap;'>
+        {t['tts_btn']}
+      </button>
+    </div>
     {msg_html}
   </div>
 
@@ -829,9 +880,13 @@ def on_load(request: gr.Request):
 def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
+    _empty_ctx = {}
 
     if not image_1 and not image_2 and not (symptoms or "").strip():
-        return _empty_output_html(lang), _empty_soap_html(lang), get_backend_status_html(lang)
+        return (
+            _empty_output_html(lang), _empty_soap_html(lang),
+            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False),
+        )
 
     region = _regions_to_prompt(selected_regions)
 
@@ -839,18 +894,42 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
         result = get_pipeline().process(
             image_1, image_2, (symptoms or "").strip(), lang=lang, region=region
         )
+        ctx = {
+            "visual_description":  result.get("visual_description", ""),
+            "possible_conditions": result.get("possible_conditions", []),
+            "triage_level":        result.get("triage_level", "Low"),
+            "patient_message":     result.get("patient_message", ""),
+        }
         return (
             _build_result_html(result, lang),
             _build_soap_html(result.get("soap_note", ""), lang),
             get_backend_status_html(lang),
+            ctx, [],
+            gr.update(visible=True),
         )
     except Exception as exc:
-        return _error_html(t, exc), _empty_soap_html(lang), get_backend_status_html(lang)
+        return (
+            _error_html(t, exc), _empty_soap_html(lang),
+            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False),
+        )
 
 
 # ---------------------------------------------------------------------------
-# Benchmark
+# Chat
 # ---------------------------------------------------------------------------
+
+def on_chat_send(question: str, history: list, context: dict, lang_choice: str):
+    from src.agents import chat_agent
+    lang = _LANG_MAP.get(lang_choice, "en")
+    if not question or not question.strip():
+        return history, ""
+    try:
+        answer, _ = chat_agent(question.strip(), context, history, lang)
+    except Exception as exc:
+        answer = f"⚠️ {exc}"
+    history = list(history or []) + [[question.strip(), answer]]
+    return history, ""
+
 
 # ---------------------------------------------------------------------------
 # CSS
@@ -1143,6 +1222,39 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
                 with gr.TabItem(_I18N["en"]["tab_doctor"], elem_id="tab-doctor"):
                     soap_html = gr.HTML(value=_empty_soap_html("en"))
 
+            # ── Follow-up Q&A chat ────────────────────────────────────────
+            with gr.Group(visible=False, elem_id="chat-section") as chat_section:
+                gr.HTML(
+                    "<div style='font-size:0.75rem; text-transform:uppercase; "
+                    "letter-spacing:.05em; color:#9ca3af; margin:14px 0 8px;'>"
+                    f"{_I18N['en']['chat_label']}</div>"
+                )
+                chat_box = gr.Chatbot(
+                    value=[],
+                    elem_id="chat-box",
+                    height=320,
+                    show_label=False,
+                    bubble_full_width=False,
+                )
+                with gr.Row():
+                    chat_input = gr.Textbox(
+                        placeholder=_I18N["en"]["chat_placeholder"],
+                        show_label=False,
+                        lines=1,
+                        scale=5,
+                        container=False,
+                    )
+                    chat_send_btn = gr.Button(
+                        _I18N["en"]["chat_send"],
+                        variant="primary",
+                        scale=1,
+                        min_width=80,
+                    )
+
+    # ── States ────────────────────────────────────────────────────────────────
+    analysis_context_state = gr.State({})
+    chat_history_state     = gr.State([])
+
     # ── Events ───────────────────────────────────────────────────────────────
 
     # Image mode toggle: show/hide second image upload
@@ -1181,9 +1293,30 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
     submit_btn.click(
         fn=predict,
         inputs=[input_img, input_img_2, symptoms_txt, lang_radio, region_selector],
-        outputs=[output_html, soap_html, status_bar],
+        outputs=[output_html, soap_html, status_bar,
+                 analysis_context_state, chat_history_state, chat_section],
         api_name="analyze",
+    ).then(
+        fn=lambda h: h,
+        inputs=[chat_history_state],
+        outputs=[chat_box],
     )
+
+    # Chat send (button click or Enter)
+    def _do_send(q, hist, ctx, lc):
+        return on_chat_send(q, hist, ctx, lc)
+
+    chat_send_btn.click(
+        fn=_do_send,
+        inputs=[chat_input, chat_history_state, analysis_context_state, lang_radio],
+        outputs=[chat_history_state, chat_input],
+    ).then(fn=lambda h: h, inputs=[chat_history_state], outputs=[chat_box])
+
+    chat_input.submit(
+        fn=_do_send,
+        inputs=[chat_input, chat_history_state, analysis_context_state, lang_radio],
+        outputs=[chat_history_state, chat_input],
+    ).then(fn=lambda h: h, inputs=[chat_history_state], outputs=[chat_box])
 
     demo.load(
         fn=on_load,

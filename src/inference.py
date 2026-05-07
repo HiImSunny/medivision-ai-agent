@@ -34,4 +34,6 @@ class MediVisionPipeline:
             "soap_note":           soap,
             "visual_description":  visual_desc,
             "_metrics":            metrics,
+            # kept for follow-up chat context
+            "_clinical":           clinical,
         }
