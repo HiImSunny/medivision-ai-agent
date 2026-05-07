@@ -1,3 +1,4 @@
+import json
 import gradio as gr
 from src.inference import MediVisionPipeline
 from src.model_loader import check_connection
@@ -587,6 +588,31 @@ def on_region_change(selected):
     return _body_map_svg(en_keys)
 
 
+def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
+    """Toggle a body region from an SVG click. Returns (new_dropdown_value, new_svg_html)."""
+    # Map svg-id → English region name
+    svg_to_region = {v[0]: k for k, v in _REGION_SHAPE_MAP.items() if v}
+    clicked_en = svg_to_region.get(svg_id, "")
+    if not clicked_en:
+        return current_regions, _body_map_svg([_display_to_en(r) for r in (current_regions or [])])
+
+    lang = _LANG_MAP.get(lang_choice, "en")
+    choices = _localized_regions(lang)
+    en_list = _BODY_REGIONS
+    clicked_display = choices[en_list.index(clicked_en)] if clicked_en in en_list else clicked_en
+
+    current = list(current_regions or [])
+    # Toggle: if already selected remove, else add
+    en_current = [_display_to_en(r) for r in current]
+    if clicked_en in en_current:
+        current = [r for r in current if _display_to_en(r) != clicked_en]
+    else:
+        current.append(clicked_display)
+
+    new_en = [_display_to_en(r) for r in current]
+    return current, _body_map_svg(new_en)
+
+
 def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
@@ -838,6 +864,7 @@ FOOTER_HTML = """
 
 <script>
 (function() {
+  /* ── AMD loading overlay ── */
   var overlay   = document.getElementById('amd-loading-overlay');
   var stepIds   = ['step-vision','step-llm','step-parse'];
   var stepTimer = null;
@@ -845,66 +872,55 @@ FOOTER_HTML = """
   function resetSteps() {
     stepIds.forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) { el.className = 'amd-step'; }
+      if (el) el.className = 'amd-step';
     });
   }
-
   function animateSteps() {
     var idx = 0;
     resetSteps();
     stepTimer = setInterval(function() {
       if (idx > 0) {
-        var prev = document.getElementById(stepIds[idx-1]);
+        var prev = document.getElementById(stepIds[idx - 1]);
         if (prev) prev.className = 'amd-step done';
       }
       var cur = document.getElementById(stepIds[idx]);
       if (cur) cur.className = 'amd-step active';
       idx++;
-      if (idx >= stepIds.length) { clearInterval(stepTimer); }
-    }, 1100);
+      if (idx >= stepIds.length) clearInterval(stepTimer);
+    }, 900);
   }
 
-  function showOverlay() {
+  /* Called from Gradio .click(js=) before submit */
+  window.amdShowOverlay = function() {
     overlay.classList.add('active');
     animateSteps();
-  }
-
-  function hideOverlay() {
+  };
+  /* Called from Gradio .then(js=) after Python returns */
+  window.amdHideOverlay = function() {
     overlay.classList.remove('active');
     clearInterval(stepTimer);
     resetSteps();
-  }
+  };
 
-  function attachBtn() {
-    var btns = document.querySelectorAll('button.primary, button[variant="primary"]');
-    btns.forEach(function(btn) {
-      if (btn.dataset.amdBound) return;
-      btn.dataset.amdBound = '1';
-      btn.addEventListener('click', function() {
-        showOverlay();
-        // Hide after max 60s as fallback; Gradio output change hides it sooner
-        var fallback = setTimeout(hideOverlay, 60000);
-        var observer = new MutationObserver(function() {
-          var out = document.querySelector('.output-html, [data-testid="html"]');
-          if (out && out.innerText.trim().length > 10) {
-            hideOverlay();
-            clearTimeout(fallback);
-            observer.disconnect();
-          }
-        });
-        var target = document.querySelector('.gradio-container') || document.body;
-        observer.observe(target, { childList: true, subtree: true, characterData: true });
-      });
+  /* ── SVG body-map click → dispatch to hidden bridge input ── */
+  function setupSvgClicks() {
+    document.addEventListener('click', function(e) {
+      var el = e.target.closest('.bpart');
+      if (!el) return;
+      var svgId = el.id;
+      if (!svgId) return;
+      /* Find the hidden bridge textbox and set its value, then trigger input event */
+      var bridge = document.getElementById('svg-click-bridge');
+      if (!bridge) return;
+      var input = bridge.querySelector('input, textarea');
+      if (!input) return;
+      var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+                           || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+      nativeInputSetter.call(input, svgId);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     });
   }
-
-  // Attach after Gradio renders
-  var initTimer = setInterval(function() {
-    if (document.querySelector('button.primary')) {
-      attachBtn();
-      clearInterval(initTimer);
-    }
-  }, 400);
+  setupSvgClicks();
 })();
 </script>
 """
@@ -913,7 +929,7 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
     gr.HTML(HEADER_HTML)
 
-    # ── Topbar: status (left) + language picker (right) ──────────────────────
+    # ── Topbar ───────────────────────────────────────────────────────────────
     with gr.Row(elem_id="topbar"):
         with gr.Column(scale=5):
             status_bar = gr.HTML(value="<div style='height:24px;'></div>")
@@ -925,6 +941,13 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
                 container=False,
                 show_label=False,
             )
+
+    # Hidden bridge: SVG clicks write svg-element-id here → triggers on_svg_click
+    svg_click_bridge = gr.Textbox(
+        value="",
+        visible=False,
+        elem_id="svg-click-bridge",
+    )
 
     # ── Main content ──────────────────────────────────────────────────────────
     with gr.Row(equal_height=False):
@@ -977,6 +1000,14 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
 
     # ── Events ───────────────────────────────────────────────────────────────
 
+    # SVG click → toggle region in dropdown + re-render SVG
+    svg_click_bridge.input(
+        fn=on_svg_click,
+        inputs=[svg_click_bridge, region_selector, lang_radio],
+        outputs=[region_selector, body_map_html],
+    )
+
+    # Dropdown change → re-render SVG (keeps sync when user edits dropdown directly)
     region_selector.change(
         fn=on_region_change,
         inputs=[region_selector],
@@ -989,11 +1020,18 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — AMD MI300X
         outputs=[input_img, symptoms_txt, submit_btn, region_selector, output_html, status_bar],
     )
 
+    # Show overlay before submit, hide immediately after Python returns
     submit_btn.click(
+        fn=None,
+        js="() => window.amdShowOverlay()",
+    ).then(
         fn=predict,
         inputs=[input_img, symptoms_txt, lang_radio, region_selector],
         outputs=[output_html, status_bar],
         api_name="analyze",
+    ).then(
+        fn=None,
+        js="() => window.amdHideOverlay()",
     )
 
     demo.load(
