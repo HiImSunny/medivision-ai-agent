@@ -62,9 +62,11 @@ def check_connection() -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
-def generate_response(prompt: str, image_path: str = None) -> tuple[str, dict]:
+def generate_response(prompt: str, image_path: str = None,
+                      image_path_2: str = None) -> tuple[str, dict]:
     """
     Send a request to the vLLM endpoint and return (text_output, metrics).
+    Supports 0, 1, or 2 images (image_path_2 for A/B comparison).
 
     metrics keys:
         latency_ms  – wall-clock time for the API call in milliseconds
@@ -76,20 +78,18 @@ def generate_response(prompt: str, image_path: str = None) -> tuple[str, dict]:
     try:
         client = _get_client()
 
-        if image_path:
-            b64, mime = _encode_image(image_path)
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": f"data:{mime};base64,{b64}"},
-                        },
-                        {"type": "text", "text": prompt},
-                    ],
-                }
-            ]
+        if image_path or image_path_2:
+            content = []
+            if image_path:
+                b64, mime = _encode_image(image_path)
+                content.append({"type": "image_url",
+                                 "image_url": {"url": f"data:{mime};base64,{b64}"}})
+            if image_path_2:
+                b64, mime = _encode_image(image_path_2)
+                content.append({"type": "image_url",
+                                 "image_url": {"url": f"data:{mime};base64,{b64}"}})
+            content.append({"type": "text", "text": prompt})
+            messages = [{"role": "user", "content": content}]
         else:
             messages = [{"role": "user", "content": prompt}]
 
@@ -116,3 +116,8 @@ def generate_response(prompt: str, image_path: str = None) -> tuple[str, dict]:
 
     except Exception as exc:
         raise RuntimeError(f"AMD Cloud backend unreachable: {exc}") from exc
+
+
+def generate_text(prompt: str) -> tuple[str, dict]:
+    """Text-only call — same endpoint as generate_response(), no image encoding."""
+    return generate_response(prompt, image_path=None)

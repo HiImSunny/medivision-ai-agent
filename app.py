@@ -60,6 +60,17 @@ _I18N = {
         "map_label":              "Anatomical Map",
         "map_select":             "click to select",
         "map_selected":           "{n} region(s) selected",
+        "img_mode_label":         "Upload Mode",
+        "img_mode_standard":      "Standard (1 image)",
+        "img_mode_compare":       "Compare (2 images — before & after)",
+        "img_label_day1":         "Medical Image (Day 1)",
+        "img_label_dayx":         "Comparison Image (Day X)",
+        "tab_patient":            "Patient View",
+        "tab_doctor":             "Export for Doctor (SOAP)",
+        "critical_warning":       "⚠️ CRITICAL: Severe symptoms detected. Please visit a medical facility within 24 hours.",
+        "conditions_label":       "Possible Conditions",
+        "soap_copy_btn":          "Copy SOAP Note",
+        "soap_empty":             "Run an analysis to generate the SOAP note.",
     },
     "vn": {
         "img_label":              "Tải lên hình ảnh y tế",
@@ -89,6 +100,17 @@ _I18N = {
         "map_label":              "Bản đồ giải phẫu",
         "map_select":             "nhấn để chọn",
         "map_selected":           "{n} vùng đã chọn",
+        "img_mode_label":         "Chế độ tải ảnh",
+        "img_mode_standard":      "Tiêu chuẩn (1 ảnh)",
+        "img_mode_compare":       "So sánh (2 ảnh — trước & sau)",
+        "img_label_day1":         "Ảnh y tế (Ngày 1)",
+        "img_label_dayx":         "Ảnh so sánh (Ngày X)",
+        "tab_patient":            "Dành cho bệnh nhân",
+        "tab_doctor":             "Xuất cho bác sĩ (SOAP)",
+        "critical_warning":       "⚠️ CẢNH BÁO: Triệu chứng nghiêm trọng được phát hiện. Vui lòng đến cơ sở y tế trong vòng 24 giờ.",
+        "conditions_label":       "Tình trạng có thể",
+        "soap_copy_btn":          "Sao chép SOAP",
+        "soap_empty":             "Thực hiện phân tích để tạo ghi chú SOAP.",
     },
     "zh": {
         "img_label":              "上传医学图像",
@@ -118,6 +140,17 @@ _I18N = {
         "map_label":              "解剖图",
         "map_select":             "点击选择",
         "map_selected":           "已选 {n} 个部位",
+        "img_mode_label":         "上传模式",
+        "img_mode_standard":      "标准模式（1张图片）",
+        "img_mode_compare":       "对比模式（2张图片 — 前后对比）",
+        "img_label_day1":         "医疗图像（第1天）",
+        "img_label_dayx":         "对比图像（第X天）",
+        "tab_patient":            "患者视图",
+        "tab_doctor":             "导出给医生（SOAP）",
+        "critical_warning":       "⚠️ 严重警告：检测到严重症状。请在24小时内前往医疗机构就诊。",
+        "conditions_label":       "可能的病症",
+        "soap_copy_btn":          "复制SOAP记录",
+        "soap_empty":             "运行分析以生成SOAP记录。",
     },
     "es": {
         "img_label":              "Subir imagen médica",
@@ -147,6 +180,17 @@ _I18N = {
         "map_label":              "Mapa anatómico",
         "map_select":             "haga clic para seleccionar",
         "map_selected":           "{n} región(es) seleccionada(s)",
+        "img_mode_label":         "Modo de carga",
+        "img_mode_standard":      "Estándar (1 imagen)",
+        "img_mode_compare":       "Comparar (2 imágenes — antes y después)",
+        "img_label_day1":         "Imagen médica (Día 1)",
+        "img_label_dayx":         "Imagen de comparación (Día X)",
+        "tab_patient":            "Vista del paciente",
+        "tab_doctor":             "Exportar para médico (SOAP)",
+        "critical_warning":       "⚠️ CRÍTICO: Síntomas graves detectados. Por favor, acuda a un centro médico en las próximas 24 horas.",
+        "conditions_label":       "Posibles condiciones",
+        "soap_copy_btn":          "Copiar nota SOAP",
+        "soap_empty":             "Ejecute un análisis para generar la nota SOAP.",
     },
     "fr": {
         "img_label":              "Télécharger une image médicale",
@@ -176,6 +220,17 @@ _I18N = {
         "map_label":              "Carte anatomique",
         "map_select":             "cliquer pour sélectionner",
         "map_selected":           "{n} région(s) sélectionnée(s)",
+        "img_mode_label":         "Mode de téléchargement",
+        "img_mode_standard":      "Standard (1 image)",
+        "img_mode_compare":       "Comparer (2 images — avant et après)",
+        "img_label_day1":         "Image médicale (Jour 1)",
+        "img_label_dayx":         "Image de comparaison (Jour X)",
+        "tab_patient":            "Vue patient",
+        "tab_doctor":             "Exporter pour le médecin (SOAP)",
+        "critical_warning":       "⚠️ CRITIQUE : Symptômes graves détectés. Veuillez vous rendre dans un établissement médical dans les 24 heures.",
+        "conditions_label":       "Conditions possibles",
+        "soap_copy_btn":          "Copier la note SOAP",
+        "soap_empty":             "Lancez une analyse pour générer la note SOAP.",
     },
     "ja": {
         "img_label":              "医療画像をアップロード",
@@ -205,6 +260,17 @@ _I18N = {
         "map_label":              "解剖マップ",
         "map_select":             "クリックして選択",
         "map_selected":           "{n} 部位選択中",
+        "img_mode_label":         "アップロードモード",
+        "img_mode_standard":      "標準（画像1枚）",
+        "img_mode_compare":       "比較（画像2枚 — 経過観察）",
+        "img_label_day1":         "医療画像（第1日）",
+        "img_label_dayx":         "比較画像（第X日）",
+        "tab_patient":            "患者向け",
+        "tab_doctor":             "医師向けエクスポート（SOAP）",
+        "critical_warning":       "⚠️ 重大：重篤な症状が検出されました。24時間以内に医療機関を受診してください。",
+        "conditions_label":       "考えられる疾患",
+        "soap_copy_btn":          "SOAPノートをコピー",
+        "soap_empty":             "分析を実行してSOAPノートを生成します。",
     },
 }
 
@@ -515,24 +581,55 @@ def _empty_output_html(lang: str) -> str:
     )
 
 
-def _build_result_html(result: dict, lang: str) -> str:
-    t          = _I18N.get(lang, _I18N["en"])
-    diag       = result.get("diagnosis", "")
-    sev_en     = result.get("severity", "Low")
-    sev        = _SEVERITY_TRANSLATE.get(lang, _SEVERITY_TRANSLATE["en"]).get(sev_en, sev_en)
-    actions    = result.get("recommended_actions", [])
-    score      = result.get("confidence_score", 0)
-    metrics    = result.get("_metrics", {})
+def _empty_soap_html(lang: str) -> str:
+    return _build_soap_html("", lang)
 
-    actions_html = "".join(
-        f"<li style='margin:5px 0; color:#d1d5db;'>{a}</li>" for a in actions
-    ) if actions else "<li style='color:#6b7280;'>—</li>"
+
+def _build_result_html(result: dict, lang: str) -> str:
+    t             = _I18N.get(lang, _I18N["en"])
+    triage        = result.get("triage_level", "Low")
+    patient_msg   = result.get("patient_message", "")
+    conditions    = result.get("possible_conditions", [])
+    metrics       = result.get("_metrics", {})
 
     backend_tag = (
         "<span style='font-size:0.7rem; background:#052e16; color:#86efac; "
         "padding:2px 8px; border-radius:4px; margin-left:8px; "
         "border:1px solid #16a34a;'>AMD Cloud</span>"
     )
+
+    # Triage color
+    triage_colors = {
+        "High":   ("#ef4444", "#7f1d1d"),
+        "Medium": ("#f97316", "#431407"),
+        "Low":    ("#22c55e", "#052e16"),
+    }
+    t_color, t_bg = triage_colors.get(triage, ("#22c55e", "#052e16"))
+
+    # Red-flag flashing banner
+    critical_banner = ""
+    if triage == "High":
+        critical_banner = f"""
+  <div style='animation:redflash 1s ease-in-out infinite;
+              background:#7f1d1d; border:2px solid #ef4444; border-radius:8px;
+              padding:14px 18px; margin-bottom:16px; text-align:center;'>
+    <span style='color:#fca5a5; font-weight:900; font-size:0.95rem; line-height:1.5;'>
+      {t['critical_warning']}
+    </span>
+  </div>"""
+
+    # Possible conditions chips
+    cond_chips = "".join(
+        f"<span style='background:#1e3a5f; color:#93c5fd; font-size:0.72rem; "
+        f"padding:3px 10px; border-radius:999px; border:1px solid #2563eb;'>{c}</span>"
+        for c in conditions
+    ) if conditions else "<span style='color:#6b7280;'>—</span>"
+
+    # Patient message paragraphs
+    msg_html = "".join(
+        f"<p style='margin:0 0 8px; color:#d1d5db; line-height:1.6;'>{line}</p>"
+        for line in patient_msg.split("\n") if line.strip()
+    ) if patient_msg else "<p style='color:#6b7280;'>—</p>"
 
     return f"""
 <div style='background:#111827; border:1px solid #ED1C24; border-radius:12px;
@@ -544,34 +641,31 @@ def _build_result_html(result: dict, lang: str) -> str:
       <div style='font-size:1.1rem; font-weight:700; color:#ED1C24;'>
         MediVision {backend_tag}
       </div>
-      <div style='font-size:0.75rem; color:#6b7280;'>AMD MI300X · ROCm · Qwen2.5-VL-7B</div>
+      <div style='font-size:0.75rem; color:#6b7280;'>AMD MI300X · ROCm · Qwen2.5-VL-7B · 3-Step Pipeline</div>
     </div>
   </div>
 
   {_metrics_bar(metrics, t)}
+  {critical_banner}
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
     <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;
-                color:#9ca3af; margin-bottom:6px;'>{t['diag_label']}</div>
-    <div style='font-size:1.05rem; font-weight:600; color:#f9fafb;'>{diag}</div>
+                color:#9ca3af; margin-bottom:6px;'>{t['severity_label']}</div>
+    <span style='background:{t_bg}; color:{t_color}; font-weight:700;
+                 padding:4px 16px; border-radius:999px; font-size:0.9rem;
+                 border:2px solid {t_color};'>{triage}</span>
   </div>
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
     <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;
-                color:#9ca3af; margin-bottom:8px;'>{t['severity_label']}</div>
-    {_severity_badge(sev)}
-  </div>
-
-  <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
-    {_confidence_bar(score, t['confidence_label'])}
+                color:#9ca3af; margin-bottom:8px;'>{t['conditions_label']}</div>
+    <div style='display:flex; flex-wrap:wrap; gap:6px;'>{cond_chips}</div>
   </div>
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
     <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;
                 color:#9ca3af; margin-bottom:8px;'>{t['actions_label']}</div>
-    <ul style='margin:0; padding-left:20px; list-style-type:disc;'>
-      {actions_html}
-    </ul>
+    {msg_html}
   </div>
 
   <div style='background:#1a1a2e; border-left:4px solid #ED1C24; border-radius:4px;
@@ -579,6 +673,37 @@ def _build_result_html(result: dict, lang: str) -> str:
     ⚠️ {t['disclaimer']}
   </div>
 
+</div>
+"""
+
+
+def _build_soap_html(soap_text: str, lang: str = "en") -> str:
+    t = _I18N.get(lang, _I18N["en"])
+    if not soap_text:
+        return (
+            f"<div style='color:#4b5563; text-align:center; padding:40px 0; font-size:0.9rem;'>"
+            f"{t['soap_empty']}</div>"
+        )
+    lines_html = "".join(
+        f"<div style='padding:3px 0; color:{'#ED1C24' if line.startswith('S ') or line.startswith('O ') or line.startswith('A ') or line.startswith('P ') else '#d1d5db'}; "
+        f"font-weight:{'700' if line[:2] in ('S ', 'O ', 'A ', 'P ') else '400'};'>{line}</div>"
+        for line in soap_text.split("\n") if line.strip()
+    )
+    return f"""
+<div style='background:#0f172a; border:1px solid #1e3a5f; border-radius:12px;
+            padding:20px; font-family:monospace; font-size:0.82rem; line-height:1.7;'>
+  <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;'>
+    <span style='color:#ED1C24; font-weight:700; font-size:0.9rem; font-family:sans-serif;'>
+      SOAP Clinical Note
+    </span>
+    <button onclick="navigator.clipboard.writeText(this.dataset.text).then(()=>this.textContent='{t['soap_copy_btn']} ✓').catch(()=>null)"
+            data-text="{soap_text.replace(chr(34), '&quot;')}"
+            style='background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; border-radius:6px;
+                   padding:4px 12px; cursor:pointer; font-size:0.72rem;'>
+      {t['soap_copy_btn']}
+    </button>
+  </div>
+  {lines_html}
 </div>
 """
 
@@ -615,7 +740,9 @@ def _ui_updates(lang_choice: str, current_regions=None):
         f"<p style='font-size:0.75rem; color:#6b7280; margin:4px 0 10px;'>{t['input_hint']}</p>"
     )
     return (
-        gr.update(label=t["img_label"]),
+        gr.update(label=t["img_label"], choices=[t["img_mode_standard"], t["img_mode_compare"]]),
+        gr.update(label=t["img_label_day1"]),
+        gr.update(label=t["img_label_dayx"]),
         gr.update(label=t["symptoms_label"], placeholder=t["symptoms_placeholder"]),
         gr.update(value=t["analyze_btn"]),
         gr.update(label=t["region_optional_label"], choices=new_choices, value=translated),
@@ -670,50 +797,71 @@ def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
 def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
-    img_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(lang_choice, current_regions=selected_regions)
+    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(
+        lang_choice, current_regions=selected_regions
+    )
 
     region = _regions_to_prompt(selected_regions)
 
     has_content = bool(image) or bool(symptoms and symptoms.strip())
     if has_content:
         try:
-            result = get_pipeline().process(image, (symptoms or "").strip(), lang=lang, region=region)
-            out_upd = _build_result_html(result, lang)
+            result = get_pipeline().process(image, None, (symptoms or "").strip(), lang=lang, region=region)
+            out_upd  = _build_result_html(result, lang)
+            soap_upd = _build_soap_html(result.get("soap_note", ""), lang)
         except Exception as exc:
-            out_upd = _error_html(t, exc)
+            out_upd  = _error_html(t, exc)
+            soap_upd = _empty_soap_html(lang)
     else:
-        out_upd = _empty_output_html(lang)
+        out_upd  = _empty_output_html(lang)
+        soap_upd = _empty_soap_html(lang)
 
-    return img_upd, sym_upd, btn_upd, region_upd, hint_upd, out_upd, get_backend_status_html(lang)
+    return mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, out_upd, soap_upd, get_backend_status_html(lang)
 
 
 def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    img_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(lang_display, current_regions=[])
+    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(
+        lang_display, current_regions=[]
+    )
     lang = _LANG_MAP.get(lang_display, "en")
-    return lang_display, img_upd, sym_upd, btn_upd, region_upd, hint_upd, _body_map_svg([], lang), _empty_output_html(lang), get_backend_status_html(lang)
+    return (
+        lang_display,
+        mode_upd, day1_upd, dayx_upd,
+        sym_upd, btn_upd, region_upd, hint_upd,
+        _body_map_svg([], lang),
+        _empty_output_html(lang),
+        _empty_soap_html(lang),
+        get_backend_status_html(lang),
+    )
 
 
 # ---------------------------------------------------------------------------
 # Predict
 # ---------------------------------------------------------------------------
 
-def predict(image, symptoms: str, lang_choice: str, selected_regions):
+def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
     t = _I18N[lang]
 
-    if not image and not symptoms.strip():
-        return _empty_output_html(lang), get_backend_status_html(lang)
+    if not image_1 and not image_2 and not (symptoms or "").strip():
+        return _empty_output_html(lang), _empty_soap_html(lang), get_backend_status_html(lang)
 
     region = _regions_to_prompt(selected_regions)
 
     try:
-        result = get_pipeline().process(image, symptoms.strip(), lang=lang, region=region)
-        return _build_result_html(result, lang), get_backend_status_html(lang)
+        result = get_pipeline().process(
+            image_1, image_2, (symptoms or "").strip(), lang=lang, region=region
+        )
+        return (
+            _build_result_html(result, lang),
+            _build_soap_html(result.get("soap_note", ""), lang),
+            get_backend_status_html(lang),
+        )
     except Exception as exc:
-        return _error_html(t, exc), get_backend_status_html(lang)
+        return _error_html(t, exc), _empty_soap_html(lang), get_backend_status_html(lang)
 
 
 # ---------------------------------------------------------------------------
@@ -771,6 +919,10 @@ label span, .gr-form > label {
     letter-spacing: 0.04em;
 }
 footer { display: none !important; }
+@keyframes redflash {
+  0%, 100% { opacity: 1; box-shadow: 0 0 12px rgba(239,68,68,0.6); }
+  50%       { opacity: 0.7; box-shadow: 0 0 24px rgba(239,68,68,0.9); }
+}
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #111827; }
 ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
@@ -914,11 +1066,24 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — Dermatolog
     with gr.Row(equal_height=False):
 
         with gr.Column(scale=1, min_width=300):
-            input_img = gr.Image(
-                type="filepath",
-                label="Upload Medical Image",
-                height=230,
+            img_mode = gr.Radio(
+                choices=[_I18N["en"]["img_mode_standard"], _I18N["en"]["img_mode_compare"]],
+                value=_I18N["en"]["img_mode_standard"],
+                label=_I18N["en"]["img_mode_label"],
+                elem_id="img-mode-radio",
             )
+            with gr.Row(equal_height=True):
+                input_img = gr.Image(
+                    type="filepath",
+                    label=_I18N["en"]["img_label_day1"],
+                    height=200,
+                )
+                input_img_2 = gr.Image(
+                    type="filepath",
+                    label=_I18N["en"]["img_label_dayx"],
+                    height=200,
+                    visible=False,
+                )
             symptoms_txt = gr.Textbox(
                 label="Symptoms Description",
                 placeholder="Describe what you feel — e.g. itchy red patch for 3 days...",
@@ -960,12 +1125,20 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — Dermatolog
             )
 
         with gr.Column(scale=1, min_width=340):
-            output_html = gr.HTML(
-                value=_empty_output_html("en"),
-                label="Analysis Result",
-            )
+            with gr.Tabs(elem_id="output-tabs"):
+                with gr.TabItem(_I18N["en"]["tab_patient"], elem_id="tab-patient"):
+                    output_html = gr.HTML(value=_empty_output_html("en"))
+                with gr.TabItem(_I18N["en"]["tab_doctor"], elem_id="tab-doctor"):
+                    soap_html = gr.HTML(value=_empty_soap_html("en"))
 
     # ── Events ───────────────────────────────────────────────────────────────
+
+    # Image mode toggle: show/hide second image upload
+    img_mode.change(
+        fn=lambda m: gr.update(visible=_I18N["en"]["img_mode_compare"] in m),
+        inputs=[img_mode],
+        outputs=[input_img_2],
+    )
 
     # SVG click → toggle region in dropdown + re-render SVG
     svg_click_bridge.input(
@@ -984,20 +1157,26 @@ with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — Dermatolog
     lang_radio.change(
         fn=on_lang_change,
         inputs=[lang_radio, input_img, symptoms_txt, region_selector],
-        outputs=[input_img, symptoms_txt, submit_btn, region_selector, input_hint_html, output_html, status_bar],
+        outputs=[img_mode, input_img, input_img_2, symptoms_txt, submit_btn,
+                 region_selector, input_hint_html, output_html, soap_html, status_bar],
     )
 
     submit_btn.click(
         fn=predict,
-        inputs=[input_img, symptoms_txt, lang_radio, region_selector],
-        outputs=[output_html, status_bar],
+        inputs=[input_img, input_img_2, symptoms_txt, lang_radio, region_selector],
+        outputs=[output_html, soap_html, status_bar],
         api_name="analyze",
     )
 
     demo.load(
         fn=on_load,
         inputs=[],
-        outputs=[lang_radio, input_img, symptoms_txt, submit_btn, region_selector, input_hint_html, body_map_html, output_html, status_bar],
+        outputs=[
+            lang_radio,
+            img_mode, input_img, input_img_2,
+            symptoms_txt, submit_btn, region_selector, input_hint_html,
+            body_map_html, output_html, soap_html, status_bar,
+        ],
     )
 
     gr.HTML(FOOTER_HTML)
