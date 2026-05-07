@@ -1,4 +1,9 @@
+import asyncio
 import json
+import tempfile
+import os
+
+import edge_tts
 import gradio as gr
 from src.inference import MediVisionPipeline
 from src.model_loader import check_connection
@@ -35,6 +40,35 @@ _LANG_BCP47 = {
     "en": "en-US", "vn": "vi-VN", "zh": "zh-CN",
     "es": "es-ES", "fr": "fr-FR", "ja": "ja-JP",
 }
+
+# edge-tts voice for each language (natural, neural voices)
+_TTS_VOICE = {
+    "en": "en-US-JennyNeural",
+    "vn": "vi-VN-HoaiMyNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "es": "es-ES-ElviraNeural",
+    "fr": "fr-FR-DeniseNeural",
+    "ja": "ja-JP-NanamiNeural",
+}
+
+
+def _tts_generate(text: str, lang: str) -> str | None:
+    """Generate TTS audio with edge-tts; returns temp file path or None on error."""
+    if not text or not text.strip():
+        return None
+    voice = _TTS_VOICE.get(lang, _TTS_VOICE["en"])
+    try:
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+        tmp.close()
+
+        async def _run():
+            communicate = edge_tts.Communicate(text.strip(), voice)
+            await communicate.save(tmp.name)
+
+        asyncio.run(_run())
+        return tmp.name
+    except Exception:
+        return None
 
 _I18N = {
     "en": {
@@ -326,9 +360,10 @@ def get_backend_status_html(lang: str = "en") -> str:
     else:
         dot, label, color = "#ef4444", t["backend_offline"], "#fca5a5"
     return (
-        f"<div style='font-size:0.75rem; color:{color}; font-family:monospace; "
-        f"white-space:nowrap; padding:6px 0;'>"
-        f"<span style='color:{dot};'>●</span> {label}"
+        f"<div style='font-size:0.78rem; color:{color}; font-family:monospace; "
+        f"white-space:nowrap; padding:6px 4px; font-weight:600;' "
+        f"role='status' aria-live='polite'>"
+        f"<span style='color:{dot};' aria-hidden='true'>&#9679;</span> {label}"
         f"</div>"
     )
 
@@ -462,22 +497,29 @@ def _body_map_svg(selected: list, lang: str = "en") -> str:
         return f"<title>{_svg_title.get(sid, sid)}</title>"
 
     counter_html = (
-        f'<div style="font-size:0.58rem; color:#ED1C24; font-family:monospace; font-weight:600;">'
+        f'<div style="font-size:0.65rem; color:#ED1C24; font-family:monospace; font-weight:600; text-align:center;">'
         f'{t["map_selected"].format(n=len(active))}</div>'
         if active else
-        f'<div style="font-size:0.58rem; color:#4b5563; font-family:monospace;">{t["map_select"]}</div>'
+        f'<div style="font-size:0.65rem; color:#4b5563; font-family:monospace; text-align:center;">{t["map_select"]}</div>'
     )
 
     return f"""
 <div style='display:flex; flex-direction:column; align-items:center; gap:6px;
             padding:8px 4px; user-select:none;'>
-  <div style='font-size:0.58rem; color:#64748b; font-family:monospace;
+  <div style='font-size:0.6rem; color:#64748b; font-family:monospace;
               letter-spacing:0.06em; text-transform:uppercase;'>{t["map_label"]}</div>
-  <svg viewBox="0 0 80 180" width="76" height="170"
-       xmlns="http://www.w3.org/2000/svg" style='overflow:visible;'>
+  <svg viewBox="0 0 80 180" width="84" height="188"
+       xmlns="http://www.w3.org/2000/svg" role="img"
+       aria-label="{t['map_label']}" style='overflow:visible; touch-action:manipulation;'>
     <style>
-      .bpart {{ transition: fill 0.2s, filter 0.2s; cursor:pointer; }}
-      .bpart:hover {{ fill: #f97316 !important; filter: drop-shadow(0 0 4px #f97316); }}
+      .bpart {{
+        transition: fill 0.2s ease, filter 0.2s ease;
+        cursor: pointer;
+        touch-action: manipulation;
+      }}
+      @media (hover: hover) {{
+        .bpart:hover {{ fill: #f97316 !important; filter: drop-shadow(0 0 4px #f97316); }}
+      }}
     </style>
     <!-- Head -->
     <ellipse class="bpart" id="svg-head" cx="40" cy="13" rx="11" ry="12"
@@ -545,12 +587,13 @@ def _body_map_svg(selected: list, lang: str = "en") -> str:
 """
 
 
-def _severity_badge(severity: str) -> str:
+def _severity_badge(severity: str, lang: str = "en") -> str:
     color, bg = _SEVERITY_COLOR.get(severity, ("#6b7280", "#f3f4f6"))
+    display = _SEVERITY_TRANSLATE.get(lang, _SEVERITY_TRANSLATE["en"]).get(severity, severity)
     return (
         f"<span style='background:{bg}; color:{color}; font-weight:700; "
         f"padding:4px 14px; border-radius:999px; font-size:0.9rem; "
-        f"border:2px solid {color};'>{severity}</span>"
+        f"border:2px solid {color};'>{display}</span>"
     )
 
 
@@ -575,12 +618,13 @@ def _metrics_bar(metrics: dict, t: dict) -> str:
         )
 
     return (
-        f"<div style='display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; align-items:center;'>"
+        f"<div style='display:flex; flex-wrap:wrap; column-gap:6px; row-gap:6px; "
+        f"margin-bottom:12px; align-items:center;'>"
         f"<span style='font-size:0.68rem; color:#ED1C24; font-family:monospace; "
-        f"font-weight:700; letter-spacing:0.05em; margin-right:2px;'>⚡ AMD MI300X</span>"
-        f"{chip('⏱', t['metrics_latency'], latency_val)}"
-        f"{chip('🚀', t['metrics_throughput'], throughput_val)}"
-        f"{chip('◈', t['metrics_tokens'], tokens_val)}"
+        f"font-weight:700; letter-spacing:0.05em; white-space:nowrap;'>&#9889; AMD MI300X</span>"
+        f"{chip('&#9201;', t['metrics_latency'], latency_val)}"
+        f"{chip('&#128640;', t['metrics_throughput'], throughput_val)}"
+        f"{chip('&#9674;', t['metrics_tokens'], tokens_val)}"
         f"</div>"
     )
 
@@ -604,7 +648,8 @@ def _confidence_bar(score: int, label: str) -> str:
 def _empty_output_html(lang: str) -> str:
     t = _I18N.get(lang, _I18N["en"])
     return (
-        f"<div style='color:#4b5563; text-align:center; padding:60px 0; font-size:0.9rem;'>"
+        f"<div style='color:#4b5563; text-align:center; padding:clamp(32px,8vw,60px) 16px; "
+        f"font-size:0.9rem; line-height:1.5;'>"
         f"{t['empty_output']}"
         f"</div>"
     )
@@ -620,7 +665,6 @@ def _build_result_html(result: dict, lang: str) -> str:
     patient_msg   = result.get("patient_message", "")
     conditions    = result.get("possible_conditions", [])
     metrics       = result.get("_metrics", {})
-    bcp47         = _LANG_BCP47.get(lang, "en-US")
 
     backend_tag = (
         "<span style='font-size:0.7rem; background:#052e16; color:#86efac; "
@@ -663,15 +707,18 @@ def _build_result_html(result: dict, lang: str) -> str:
 
     return f"""
 <div style='background:#111827; border:1px solid #ED1C24; border-radius:12px;
-            padding:20px; font-family:Arial,sans-serif; color:#f9fafb;'>
+            padding:clamp(14px,4vw,20px); font-family:Arial,sans-serif; color:#f9fafb;
+            animation:fadeSlideIn 0.3s ease;'>
 
   <div style='display:flex; align-items:center; gap:10px; margin-bottom:12px;'>
-    <div style='background:#ED1C24; width:4px; border-radius:2px; height:36px;'></div>
-    <div>
-      <div style='font-size:1.1rem; font-weight:700; color:#ED1C24;'>
+    <div style='background:#ED1C24; width:4px; border-radius:2px; height:36px; flex-shrink:0;'></div>
+    <div style='min-width:0;'>
+      <div style='font-size:clamp(1rem,3vw,1.1rem); font-weight:700; color:#ED1C24; white-space:nowrap;'>
         MediVision {backend_tag}
       </div>
-      <div style='font-size:0.75rem; color:#6b7280;'>AMD MI300X · ROCm · Qwen2.5-VL-7B · 3-Step Pipeline</div>
+      <div style='font-size:0.72rem; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>
+        AMD MI300X &middot; ROCm &middot; Qwen2.5-VL-7B &middot; 3-Step Pipeline
+      </div>
     </div>
   </div>
 
@@ -679,49 +726,32 @@ def _build_result_html(result: dict, lang: str) -> str:
   {critical_banner}
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
-    <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;
+    <div style='font-size:0.72rem; text-transform:uppercase; letter-spacing:.05em;
                 color:#9ca3af; margin-bottom:6px;'>{t['severity_label']}</div>
     <span style='background:{t_bg}; color:{t_color}; font-weight:700;
-                 padding:4px 16px; border-radius:999px; font-size:0.9rem;
-                 border:2px solid {t_color};'>{triage}</span>
+                 padding:6px 18px; border-radius:999px; font-size:0.9rem;
+                 border:2px solid {t_color}; display:inline-block;'>
+      {_SEVERITY_TRANSLATE.get(lang, _SEVERITY_TRANSLATE["en"]).get(triage, triage)}
+    </span>
   </div>
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
-    <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em;
+    <div style='font-size:0.72rem; text-transform:uppercase; letter-spacing:.05em;
                 color:#9ca3af; margin-bottom:8px;'>{t['conditions_label']}</div>
     <div style='display:flex; flex-wrap:wrap; gap:6px;'>{cond_chips}</div>
   </div>
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
-    <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;'>
-      <div style='font-size:0.75rem; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af;'>
-        {t['actions_label']}
-      </div>
-      <button
-        data-text="{patient_msg.replace(chr(34), '&quot;').replace(chr(10), ' ').strip()}"
-        data-lang="{bcp47}"
-        data-play-label="{t['tts_btn']}"
-        onclick="(function(btn){{
-          var s=window.speechSynthesis;
-          if(s.speaking){{s.cancel();btn.textContent=btn.dataset.playLabel;return;}}
-          var u=new SpeechSynthesisUtterance(btn.dataset.text);
-          u.lang=btn.dataset.lang;
-          u.onend=function(){{btn.textContent=btn.dataset.playLabel;}};
-          u.onerror=function(){{btn.textContent=btn.dataset.playLabel;}};
-          btn.textContent='⏹ Stop';
-          s.speak(u);
-        }})(this)"
-        style='background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; border-radius:6px;
-               padding:4px 12px; cursor:pointer; font-size:0.72rem; white-space:nowrap;'>
-        {t['tts_btn']}
-      </button>
+    <div style='font-size:0.72rem; text-transform:uppercase; letter-spacing:.05em;
+                color:#9ca3af; margin-bottom:8px;'>
+      {t['actions_label']}
     </div>
     {msg_html}
   </div>
 
   <div style='background:#1a1a2e; border-left:4px solid #ED1C24; border-radius:4px;
-              padding:10px 14px; font-size:0.78rem; color:#9ca3af;'>
-    ⚠️ {t['disclaimer']}
+              padding:10px 14px; font-size:0.78rem; color:#9ca3af; line-height:1.5;'>
+    &#9888;&#65039; {t['disclaimer']}
   </div>
 
 </div>
@@ -742,15 +772,19 @@ def _build_soap_html(soap_text: str, lang: str = "en") -> str:
     )
     return f"""
 <div style='background:#0f172a; border:1px solid #1e3a5f; border-radius:12px;
-            padding:20px; font-family:monospace; font-size:0.82rem; line-height:1.7;'>
-  <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;'>
+            padding:clamp(14px,4vw,20px); font-family:monospace; font-size:0.82rem;
+            line-height:1.7; word-break:break-word; overflow-wrap:break-word;'>
+  <div style='display:flex; justify-content:space-between; align-items:center;
+              margin-bottom:14px; flex-wrap:wrap; gap:8px;'>
     <span style='color:#ED1C24; font-weight:700; font-size:0.9rem; font-family:sans-serif;'>
       SOAP Clinical Note
     </span>
-    <button onclick="navigator.clipboard.writeText(this.dataset.text).then(()=>this.textContent='{t['soap_copy_btn']} ✓').catch(()=>null)"
+    <button onclick="navigator.clipboard.writeText(this.dataset.text).then(()=>this.textContent='{t['soap_copy_btn']} &#10003;').catch(()=>null)"
             data-text="{soap_text.replace(chr(34), '&quot;')}"
             style='background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; border-radius:6px;
-                   padding:4px 12px; cursor:pointer; font-size:0.72rem;'>
+                   padding:6px 14px; cursor:pointer; font-size:0.78rem; min-height:36px;
+                   touch-action:manipulation; white-space:nowrap;'
+            aria-label="{t['soap_copy_btn']}">
       {t['soap_copy_btn']}
     </button>
   </div>
@@ -766,12 +800,13 @@ def _build_soap_html(soap_text: str, lang: str = "en") -> str:
 def _error_html(t: dict, exc: Exception) -> str:
     return (
         "<div style='background:#111827; border:1px solid #ef4444; border-radius:12px; "
-        "padding:24px; font-family:Arial,sans-serif; text-align:center;'>"
-        "<div style='font-size:1.5rem; margin-bottom:12px;'>⚠️</div>"
+        "padding:clamp(16px,4vw,24px); font-family:Arial,sans-serif; text-align:center;'>"
+        "<div style='font-size:1.4rem; margin-bottom:12px;' role='img' aria-label='Warning'>&#9888;&#65039;</div>"
         f"<div style='font-size:1rem; font-weight:700; color:#ef4444; margin-bottom:8px;'>{t['error_title']}</div>"
-        f"<div style='font-size:0.85rem; color:#9ca3af; margin-bottom:16px;'>{t['error_body']}</div>"
+        f"<div style='font-size:0.875rem; color:#9ca3af; margin-bottom:16px; line-height:1.5;'>{t['error_body']}</div>"
         f"<div style='font-size:0.75rem; color:#6b7280; font-family:monospace; "
-        f"background:#1f2937; padding:8px 12px; border-radius:6px;'>{exc}</div>"
+        f"background:#1f2937; padding:10px 12px; border-radius:6px; "
+        f"word-break:break-word; text-align:left;'>{exc}</div>"
         "</div>"
     )
 
@@ -788,7 +823,11 @@ def _ui_updates(lang_choice: str, current_regions=None):
         if en in _BODY_REGIONS:
             translated.append(new_choices[_BODY_REGIONS.index(en)])
     hint_html = (
-        f"<p style='font-size:0.75rem; color:#6b7280; margin:4px 0 10px;'>{t['input_hint']}</p>"
+        f"<p style='font-size:0.8rem; color:#6b7280; margin:4px 0 10px; line-height:1.5;'>{t['input_hint']}</p>"
+    )
+    chat_label_html = (
+        f"<div style='font-size:0.78rem; text-transform:uppercase; "
+        f"letter-spacing:.05em; color:#9ca3af; margin:14px 0 8px; font-weight:600;'>{t['chat_label']}</div>"
     )
     return (
         gr.update(label=t["img_label"], choices=[t["img_mode_standard"], t["img_mode_compare"]]),
@@ -798,6 +837,10 @@ def _ui_updates(lang_choice: str, current_regions=None):
         gr.update(value=t["analyze_btn"]),
         gr.update(label=t["region_optional_label"], choices=new_choices, value=translated),
         gr.update(value=hint_html),
+        gr.update(placeholder=t["chat_placeholder"]),
+        gr.update(value=t["chat_send"]),
+        gr.update(value=t["tts_btn"]),
+        gr.update(value=chat_label_html),
     )
 
 
@@ -847,18 +890,19 @@ def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
 
 def on_lang_change(lang_choice: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
-    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(
+    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd = _ui_updates(
         lang_choice, current_regions=selected_regions
     )
     return (mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd,
-            _empty_output_html(lang), _empty_soap_html(lang), get_backend_status_html(lang))
+            _empty_output_html(lang), _empty_soap_html(lang), get_backend_status_html(lang),
+            chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd)
 
 
 def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(
+    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd = _ui_updates(
         lang_display, current_regions=[]
     )
     lang = _LANG_MAP.get(lang_display, "en")
@@ -870,6 +914,7 @@ def on_load(request: gr.Request):
         _empty_output_html(lang),
         _empty_soap_html(lang),
         get_backend_status_html(lang),
+        chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd,
     )
 
 
@@ -885,7 +930,7 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
     if not image_1 and not image_2 and not (symptoms or "").strip():
         return (
             _empty_output_html(lang), _empty_soap_html(lang),
-            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False),
+            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False), "",
         )
 
     region = _regions_to_prompt(selected_regions)
@@ -894,11 +939,12 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
         result = get_pipeline().process(
             image_1, image_2, (symptoms or "").strip(), lang=lang, region=region
         )
+        patient_msg = result.get("patient_message", "")
         ctx = {
             "visual_description":  result.get("visual_description", ""),
             "possible_conditions": result.get("possible_conditions", []),
             "triage_level":        result.get("triage_level", "Low"),
-            "patient_message":     result.get("patient_message", ""),
+            "patient_message":     patient_msg,
         }
         return (
             _build_result_html(result, lang),
@@ -906,12 +952,20 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
             get_backend_status_html(lang),
             ctx, [],
             gr.update(visible=True),
+            patient_msg,
         )
     except Exception as exc:
         return (
             _error_html(t, exc), _empty_soap_html(lang),
-            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False),
+            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False), "",
         )
+
+
+def on_tts_click(patient_msg: str, lang_choice: str):
+    """Generate TTS audio for the patient message."""
+    lang = _LANG_MAP.get(lang_choice, "en")
+    audio_path = _tts_generate(patient_msg, lang)
+    return audio_path
 
 
 # ---------------------------------------------------------------------------
@@ -938,17 +992,31 @@ def on_chat_send(question: str, history: list, context: dict, lang_choice: str):
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
 
+/* ── Base ── */
 body, .gradio-container {
     background-color: #030712 !important;
     color: #f9fafb !important;
     font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+/* ── Accessibility: focus rings ── */
+*:focus-visible {
+    outline: 2px solid #ED1C24 !important;
+    outline-offset: 2px !important;
+    border-radius: 4px;
 }
 input:focus, textarea:focus {
     border-color: #ED1C24 !important;
     box-shadow: 0 0 0 2px rgba(237,28,36,0.25) !important;
 }
 
-/* ── CTA button — full-width AMD red with glow ── */
+/* ── iOS: prevent auto-zoom on small inputs (must be ≥16px) ── */
+@media (max-width: 768px) {
+    input[type="text"], input[type="search"], select,
+    textarea.scroll-hide { font-size: 16px !important; }
+}
+
+/* ── Analyze button ── */
 button.primary, .gr-button-primary {
     background: linear-gradient(135deg, #ED1C24 0%, #b01318 100%) !important;
     color: #fff !important;
@@ -969,11 +1037,26 @@ button.primary:hover {
 }
 button.primary:active { opacity: 0.8 !important; transform: scale(0.99) !important; }
 
+/* Chat "Send" — override full-width / glow from above */
+#chat-section button.primary,
+#chat-section .gr-button-primary {
+    width: auto !important;
+    min-width: 72px !important;
+    padding: 10px 18px !important;
+    font-size: 0.875rem !important;
+    letter-spacing: 0.02em !important;
+    text-transform: none !important;
+    box-shadow: 0 2px 8px rgba(237,28,36,0.3) !important;
+}
+
+/* ── Panels / boxes ── */
 .gr-box, .gr-panel {
     background: #111827 !important;
     border: 1px solid #1f2937 !important;
     border-radius: 10px !important;
 }
+
+/* ── Form labels ── */
 label span, .gr-form > label {
     color: #cbd5e1 !important;
     font-size: 0.82rem !important;
@@ -982,35 +1065,105 @@ label span, .gr-form > label {
     letter-spacing: 0.04em;
 }
 footer { display: none !important; }
+
+/* ── TTS button ── */
+#tts-btn {
+    background: #1e3a5f !important;
+    color: #93c5fd !important;
+    border: 1px solid #2563eb !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    letter-spacing: 0.03em !important;
+    text-transform: none !important;
+    padding: 8px 18px !important;
+    min-height: 44px !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    width: auto !important;
+    transition: background 0.2s, border-color 0.2s !important;
+}
+#tts-btn:hover {
+    background: #1d4ed8 !important;
+    border-color: #3b82f6 !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+}
+
+/* ── Tab bar — min 44px touch target, clear selected state ── */
+[role="tab"] {
+    min-height: 44px !important;
+    padding: 8px 16px !important;
+    color: #9ca3af !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    transition: color 0.2s !important;
+}
+[role="tab"][aria-selected="true"] { color: #f9fafb !important; }
+
+/* ── Animations ── */
 @keyframes redflash {
   0%, 100% { opacity: 1; box-shadow: 0 0 12px rgba(239,68,68,0.6); }
   50%       { opacity: 0.7; box-shadow: 0 0 24px rgba(239,68,68,0.9); }
 }
-::-webkit-scrollbar { width: 6px; }
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Respect prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #111827; }
 ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
 /* ── Topbar ── */
 #topbar {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 4px 0 !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px 0 !important;
     border-bottom: 1px solid #1f2937;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
-#topbar > .gr-row,
-#topbar > div { width: 100% !important; }
-#lang-col { min-width: 180px !important; max-width: 200px !important; }
-#lang-col label span { text-transform: none !important; font-size: 0.78rem !important; }
+#topbar > .gr-row, #topbar > div { width: 100% !important; }
+#lang-col { min-width: 160px !important; max-width: 200px !important; }
+#lang-col label span { text-transform: none !important; font-size: 0.82rem !important; }
 
-/* ── Mobile: hide drag-and-drop text ── */
+/* ── Chat section: smooth reveal ── */
+#chat-section { animation: fadeSlideIn 0.3s ease; }
+
+/* ── Main 2-column → stack on mobile ── */
+#main-row { flex-wrap: wrap !important; }
+@media (max-width: 768px) {
+    #main-row > div {
+        min-width: 100% !important;
+        width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+    /* Chatbot height on mobile */
+    #chat-box > div { height: 200px !important; }
+}
+
+/* ── SVG body map: tap without double-tap zoom ── */
+.bpart { touch-action: manipulation; }
+
+/* ── Image upload: mobile ── */
 @media (pointer: coarse), (max-width: 768px) {
     .upload-container [data-testid="drop-zone"] .upload-text:first-child,
     .svelte-upload .file-preview-title,
     span.drag-text, .drag-drop-label { display: none !important; }
     .upload-container { min-height: 120px !important; }
-    /* Prioritise camera/file button visual */
     .upload-container button { font-size: 0.9rem !important; padding: 10px 20px !important; }
 }
 
@@ -1036,7 +1189,14 @@ footer { display: none !important; }
     .gr-samples thead, .gr-samples-table thead { display: none !important; }
 }
 
-
+/* ── Safe area insets (notch / home-bar) ── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .gradio-container {
+        padding-left:   max(12px, env(safe-area-inset-left))   !important;
+        padding-right:  max(12px, env(safe-area-inset-right))  !important;
+        padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+    }
+}
 """
 
 # ---------------------------------------------------------------------------
@@ -1044,28 +1204,28 @@ footer { display: none !important; }
 # ---------------------------------------------------------------------------
 
 HEADER_HTML = """
-<div style='text-align:center; padding:24px 0 8px; user-select:none;'>
-  <div style='font-size:2rem; font-weight:900; letter-spacing:-0.02em;'>
+<div style='text-align:center; padding:clamp(16px,4vw,28px) 8px 8px; user-select:none;'>
+  <div style='font-size:clamp(1.6rem,6vw,2.2rem); font-weight:900; letter-spacing:-0.02em; line-height:1.1;'>
     <span style='color:#ED1C24;'>Medi</span><span style='color:#f9fafb;'>Vision</span>
   </div>
-  <div style='color:#9ca3af; font-size:0.9rem; margin-top:4px;'>
+  <div style='color:#9ca3af; font-size:clamp(0.8rem,2.5vw,0.92rem); margin-top:6px; line-height:1.4;'>
     Multilingual Dermatology &amp; Wound Care AI Assistant
   </div>
-  <div style='margin-top:10px; display:inline-flex; gap:8px; flex-wrap:wrap; justify-content:center;'>
-    <span style='background:#1f2937; color:#ED1C24; font-size:0.72rem; font-weight:700;
-                 padding:3px 12px; border-radius:999px; border:1px solid #ED1C24;'>
-      AMD Instinct™ MI300X
+  <div style='margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; justify-content:center;'>
+    <span style='background:#1f2937; color:#ED1C24; font-size:0.7rem; font-weight:700;
+                 padding:4px 12px; border-radius:999px; border:1px solid #ED1C24; white-space:nowrap;'>
+      AMD Instinct&#8482; MI300X
     </span>
-    <span style='background:#1f2937; color:#9ca3af; font-size:0.72rem; font-weight:600;
-                 padding:3px 12px; border-radius:999px; border:1px solid #374151;'>
-      ROCm · Qwen2.5-VL-7B
+    <span style='background:#1f2937; color:#9ca3af; font-size:0.7rem; font-weight:600;
+                 padding:4px 12px; border-radius:999px; border:1px solid #374151; white-space:nowrap;'>
+      ROCm &middot; Qwen2.5-VL-7B
     </span>
-    <span style='background:#1f2937; color:#9ca3af; font-size:0.72rem; font-weight:600;
-                 padding:3px 12px; border-radius:999px; border:1px solid #374151;'>
-      EN · VI · ZH · ES · FR · JA
+    <span style='background:#1f2937; color:#9ca3af; font-size:0.7rem; font-weight:600;
+                 padding:4px 12px; border-radius:999px; border:1px solid #374151; white-space:nowrap;'>
+      EN &middot; VI &middot; ZH &middot; ES &middot; FR &middot; JA
     </span>
-    <span style='background:#1f2937; color:#9ca3af; font-size:0.72rem; font-weight:600;
-                 padding:3px 12px; border-radius:999px; border:1px solid #374151;'>
+    <span style='background:#1f2937; color:#9ca3af; font-size:0.7rem; font-weight:600;
+                 padding:4px 12px; border-radius:999px; border:1px solid #374151; white-space:nowrap;'>
       AMD Developer Hackathon 2026
     </span>
   </div>
@@ -1073,10 +1233,10 @@ HEADER_HTML = """
 """
 
 FOOTER_HTML = """
-<div style='text-align:center; padding:16px 0 4px; border-top:1px solid #1f2937; margin-top:8px;'>
-  <span style='color:#4b5563; font-size:0.75rem;'>
+<div style='text-align:center; padding:16px 8px 8px; border-top:1px solid #1f2937; margin-top:12px;'>
+  <span style='color:#4b5563; font-size:0.75rem; line-height:1.8;'>
     Powered by <span style='color:#ED1C24; font-weight:700;'>AMD MI300X + ROCm</span>
-    &nbsp;·&nbsp; Track 3: Vision &amp; Multimodal AI &nbsp;·&nbsp; MIT License
+    &nbsp;&middot;&nbsp; Track 3: Vision &amp; Multimodal AI &nbsp;&middot;&nbsp; MIT License
   </span>
 </div>
 """
@@ -1154,7 +1314,7 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
     )
 
     # ── Main content ──────────────────────────────────────────────────────────
-    with gr.Row(equal_height=False):
+    with gr.Row(equal_height=False, elem_id="main-row"):
 
         with gr.Column(scale=1, min_width=300):
             img_mode = gr.Radio(
@@ -1182,7 +1342,7 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
             )
 
             input_hint_html = gr.HTML(
-                value="<p style='font-size:0.75rem; color:#6b7280; margin:4px 0 10px;'>"
+                value=f"<p style='font-size:0.8rem; color:#6b7280; margin:4px 0 10px; line-height:1.5;'>"
                       f"{_I18N['en']['input_hint']}</p>",
                 elem_id="input-hint",
             )
@@ -1219,24 +1379,41 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
             with gr.Tabs(elem_id="output-tabs"):
                 with gr.TabItem(_I18N["en"]["tab_patient"], elem_id="tab-patient"):
                     output_html = gr.HTML(value=_empty_output_html("en"))
+                    with gr.Row():
+                        tts_btn = gr.Button(
+                            _I18N["en"]["tts_btn"],
+                            variant="secondary",
+                            size="sm",
+                            elem_id="tts-btn",
+                            scale=1,
+                            min_width=100,
+                        )
+                    tts_audio = gr.Audio(
+                        value=None,
+                        label=None,
+                        autoplay=True,
+                        visible=False,
+                        show_label=False,
+                        show_download_button=False,
+                    )
                 with gr.TabItem(_I18N["en"]["tab_doctor"], elem_id="tab-doctor"):
                     soap_html = gr.HTML(value=_empty_soap_html("en"))
 
             # ── Follow-up Q&A chat ────────────────────────────────────────
             with gr.Group(visible=False, elem_id="chat-section") as chat_section:
-                gr.HTML(
-                    "<div style='font-size:0.75rem; text-transform:uppercase; "
-                    "letter-spacing:.05em; color:#9ca3af; margin:14px 0 8px;'>"
+                chat_label_html = gr.HTML(
+                    "<div style='font-size:0.78rem; text-transform:uppercase; "
+                    "letter-spacing:.05em; color:#9ca3af; margin:14px 0 8px; font-weight:600;'>"
                     f"{_I18N['en']['chat_label']}</div>"
                 )
                 chat_box = gr.Chatbot(
                     value=[],
                     elem_id="chat-box",
-                    height=320,
+                    height=280,
                     show_label=False,
                     bubble_full_width=False,
                 )
-                with gr.Row():
+                with gr.Row(equal_height=True):
                     chat_input = gr.Textbox(
                         placeholder=_I18N["en"]["chat_placeholder"],
                         show_label=False,
@@ -1248,12 +1425,13 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
                         _I18N["en"]["chat_send"],
                         variant="primary",
                         scale=1,
-                        min_width=80,
+                        min_width=72,
                     )
 
     # ── States ────────────────────────────────────────────────────────────────
     analysis_context_state = gr.State({})
     chat_history_state     = gr.State([])
+    patient_msg_state      = gr.State("")
 
     # ── Events ───────────────────────────────────────────────────────────────
 
@@ -1283,7 +1461,8 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
         fn=on_lang_change,
         inputs=[lang_radio, region_selector],
         outputs=[img_mode, input_img, input_img_2, symptoms_txt, submit_btn,
-                 region_selector, input_hint_html, output_html, soap_html, status_bar],
+                 region_selector, input_hint_html, output_html, soap_html, status_bar,
+                 chat_input, chat_send_btn, tts_btn, chat_label_html],
     ).then(
         fn=None,
         inputs=[lang_radio],
@@ -1294,12 +1473,23 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
         fn=predict,
         inputs=[input_img, input_img_2, symptoms_txt, lang_radio, region_selector],
         outputs=[output_html, soap_html, status_bar,
-                 analysis_context_state, chat_history_state, chat_section],
+                 analysis_context_state, chat_history_state, chat_section,
+                 patient_msg_state],
         api_name="analyze",
     ).then(
         fn=lambda h: h,
         inputs=[chat_history_state],
         outputs=[chat_box],
+    )
+
+    tts_btn.click(
+        fn=on_tts_click,
+        inputs=[patient_msg_state, lang_radio],
+        outputs=[tts_audio],
+    ).then(
+        fn=lambda p: gr.update(visible=bool(p)),
+        inputs=[patient_msg_state],
+        outputs=[tts_audio],
     )
 
     # Chat send (button click or Enter)
@@ -1326,6 +1516,7 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
             img_mode, input_img, input_img_2,
             symptoms_txt, submit_btn, region_selector, input_hint_html,
             body_map_html, output_html, soap_html, status_bar,
+            chat_input, chat_send_btn, tts_btn, chat_label_html,
         ],
     ).then(
         fn=None,
