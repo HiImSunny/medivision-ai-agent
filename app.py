@@ -874,17 +874,6 @@ def _build_result_html(result: dict, lang: str) -> str:
       {t['actions_label']}
     </div>
     {msg_html}
-    <div style='margin-top:12px;'>
-      <button onclick="(function(){{var el=document.getElementById('tts-btn');if(el){{var b=el.querySelector('button');if(b)b.click();}}}})();"
-              style='background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb;
-                     border-radius:6px; padding:8px 18px; cursor:pointer;
-                     font-size:0.875rem; font-weight:600; min-height:44px;
-                     touch-action:manipulation; transition:background 0.2s;'
-              onmouseover="this.style.background='#1d4ed8'"
-              onmouseout="this.style.background='#1e3a5f'">
-        {t['tts_btn']}
-      </button>
-    </div>
   </div>
 
   <div style='background:#1a1a2e; border-left:4px solid #ED1C24; border-radius:4px;
@@ -1028,22 +1017,24 @@ def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
 
 def on_lang_change(lang_choice: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
-    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd = _ui_updates(
+    t = _I18N.get(lang, _I18N["en"])
+    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, chat_ph_upd, chat_send_upd, _tts_upd, chat_lbl_upd = _ui_updates(
         lang_choice, current_regions=selected_regions
     )
     return (mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd,
             _empty_output_html(lang), _empty_soap_html(lang), get_backend_status_html(lang),
-            chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd)
+            chat_ph_upd, chat_send_upd, gr.update(visible=False, value=t["tts_btn"]), chat_lbl_upd)
 
 
 def on_load(request: gr.Request):
     lang_display = _detect_lang_from_header(
         request.headers.get("accept-language", "")
     )
-    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd = _ui_updates(
+    mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, chat_ph_upd, chat_send_upd, _tts_upd, chat_lbl_upd = _ui_updates(
         lang_display, current_regions=[]
     )
     lang = _LANG_MAP.get(lang_display, "en")
+    t = _I18N.get(lang, _I18N["en"])
     return (
         lang_display,
         mode_upd, day1_upd, dayx_upd,
@@ -1052,7 +1043,7 @@ def on_load(request: gr.Request):
         _empty_output_html(lang),
         _empty_soap_html(lang),
         get_backend_status_html(lang),
-        chat_ph_upd, chat_send_upd, tts_upd, chat_lbl_upd,
+        chat_ph_upd, chat_send_upd, gr.update(visible=False, value=t["tts_btn"]), chat_lbl_upd,
     )
 
 
@@ -1068,7 +1059,8 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
     if not image_1 and not image_2 and not (symptoms or "").strip():
         return (
             _empty_output_html(lang), _empty_soap_html(lang),
-            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False), "",
+            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False),
+            gr.update(visible=False), "",
         )
 
     region = _regions_to_prompt(selected_regions)
@@ -1093,12 +1085,14 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
             get_backend_status_html(lang),
             ctx, [],
             gr.update(visible=True),
+            gr.update(visible=bool(patient_msg)),
             patient_msg,
         )
     except Exception as exc:
         return (
             _error_html(t, exc), _empty_soap_html(lang),
-            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False), "",
+            get_backend_status_html(lang), _empty_ctx, [], gr.update(visible=False),
+            gr.update(visible=False), "",
         )
 
 
@@ -1118,11 +1112,20 @@ def on_chat_send(question: str, history: list, context: dict, lang_choice: str):
     lang = _LANG_MAP.get(lang_choice, "en")
     if not question or not question.strip():
         return history, ""
+    # Convert messages-format [{role,content},...] to [[user,bot],...] tuples for chat_agent
+    msgs = list(history or [])
+    tuples = []
+    for i in range(0, len(msgs) - 1, 2):
+        if msgs[i].get("role") == "user" and msgs[i+1].get("role") == "assistant":
+            tuples.append([msgs[i]["content"], msgs[i+1]["content"]])
     try:
-        answer, _ = chat_agent(question.strip(), context, history, lang)
+        answer, _ = chat_agent(question.strip(), context, tuples, lang)
     except Exception as exc:
         answer = f"⚠️ {exc}"
-    history = list(history or []) + [[question.strip(), answer]]
+    history = list(history or []) + [
+        {"role": "user", "content": question.strip()},
+        {"role": "assistant", "content": answer},
+    ]
     return history, ""
 
 
@@ -1207,8 +1210,7 @@ label span, .gr-form > label {
 }
 footer { display: none !important; }
 
-/* ── TTS button (Gradio component hidden; HTML button embedded in result) ── */
-#tts-btn { display: none !important; }
+/* ── TTS button ── */
 #tts-btn {
     background: #1e3a5f !important;
     color: #93c5fd !important;
@@ -1530,25 +1532,25 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
             with gr.Tabs(elem_id="output-tabs"):
                 with gr.TabItem(_I18N["en"]["tab_patient"], elem_id="tab-patient"):
                     output_html = gr.HTML(value=_empty_output_html("en"))
-                    with gr.Row():
-                        tts_btn = gr.Button(
-                            _I18N["en"]["tts_btn"],
-                            variant="secondary",
-                            size="sm",
-                            elem_id="tts-btn",
-                            scale=1,
-                            min_width=100,
-                        )
-                    tts_audio = gr.Audio(
-                        value=None,
-                        label=None,
-                        autoplay=True,
-                        visible=False,
-                        show_label=False,
-                        show_download_button=False,
-                    )
                 with gr.TabItem(_I18N["en"]["tab_doctor"], elem_id="tab-doctor"):
                     soap_html = gr.HTML(value=_empty_soap_html("en"))
+
+            tts_btn = gr.Button(
+                _I18N["en"]["tts_btn"],
+                variant="secondary",
+                size="sm",
+                elem_id="tts-btn",
+                visible=False,
+                min_width=100,
+            )
+            tts_audio = gr.Audio(
+                value=None,
+                label=None,
+                autoplay=True,
+                visible=False,
+                show_label=False,
+                show_download_button=False,
+            )
 
             # ── Follow-up Q&A chat ────────────────────────────────────────
             with gr.Group(visible=False, elem_id="chat-section") as chat_section:
@@ -1562,7 +1564,7 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
                     elem_id="chat-box",
                     height=280,
                     show_label=False,
-                    bubble_full_width=False,
+                    type="messages",
                 )
                 with gr.Row(equal_height=True):
                     chat_input = gr.Textbox(
@@ -1629,7 +1631,7 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
         inputs=[input_img, input_img_2, symptoms_txt, lang_radio, region_selector],
         outputs=[output_html, soap_html, status_bar,
                  analysis_context_state, chat_history_state, chat_section,
-                 patient_msg_state],
+                 tts_btn, patient_msg_state],
         api_name="analyze",
     ).then(
         fn=lambda h: h,
@@ -1642,8 +1644,8 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
         inputs=[patient_msg_state, lang_radio],
         outputs=[tts_audio],
     ).then(
-        fn=lambda p: gr.update(visible=bool(p)),
-        inputs=[patient_msg_state],
+        fn=lambda a: gr.update(visible=bool(a)),
+        inputs=[tts_audio],
         outputs=[tts_audio],
     )
 

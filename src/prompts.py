@@ -36,7 +36,7 @@ Required schema:
   "triage_level": "High" or "Medium" or "Low",
   "urgency_reason": "one sentence in English explaining WHY this triage level was assigned",
   "possible_conditions": [
-    {"name": "condition name in TARGET LANGUAGE", "probability": integer 5 to 95, "icd10": "X00.0"}
+    {"name": "condition name in TARGET LANGUAGE", "probability": integer 5 to 95, "icd10": "alphanumeric code only e.g. S72.0 — NO text, NO translations, NO language characters before or after the code"}
   ],
   "red_flags": ["specific alarming sign from visual or symptom data — English only"],
   "watch_symptoms": ["symptom that should prompt immediate re-evaluation — English only"],

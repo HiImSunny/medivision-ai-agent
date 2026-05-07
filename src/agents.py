@@ -1,6 +1,12 @@
 import json
 import re
 
+
+def _clean_icd10(code: str) -> str:
+    """Strip any non-ASCII or non-alphanumeric prefix/suffix from ICD-10 codes.
+    Models like Qwen sometimes prepend the Chinese translation before the code."""
+    return re.sub(r"[^A-Za-z0-9.\-]", "", code)
+
 from src.model_loader import generate_response, generate_text
 from src.prompts import (
     VISION_AGENT_SYSTEM,
@@ -103,7 +109,7 @@ def clinical_agent(visual_description: str, symptoms: str, lang: str = "en") -> 
             conditions.append({
                 "name":        str(item.get("name", item.get("condition", "Unknown"))),
                 "probability": int(item.get("probability", item.get("match_probability", 50))),
-                "icd10":       str(item.get("icd10", item.get("icd10_code", ""))),
+                "icd10":       _clean_icd10(str(item.get("icd10", item.get("icd10_code", "")))),
             })
         elif isinstance(item, str):
             conditions.append({"name": item, "probability": 50, "icd10": ""})
