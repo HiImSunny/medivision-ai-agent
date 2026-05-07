@@ -114,6 +114,9 @@ _I18N = {
         "chat_label":             "Follow-up Questions",
         "chat_placeholder":       "Ask a follow-up question about your condition...",
         "chat_send":              "Send",
+        "red_flags_label":        "Red Flags",
+        "watch_for_label":        "Watch For",
+        "analyzing_label":        "Analyzing...",
     },
     "vn": {
         "img_label":              "Tải lên hình ảnh y tế",
@@ -158,6 +161,9 @@ _I18N = {
         "chat_label":             "Câu hỏi tiếp theo",
         "chat_placeholder":       "Đặt câu hỏi tiếp theo về tình trạng của bạn...",
         "chat_send":              "Gửi",
+        "red_flags_label":        "Cảnh báo",
+        "watch_for_label":        "Theo dõi",
+        "analyzing_label":        "Đang phân tích...",
     },
     "zh": {
         "img_label":              "上传医学图像",
@@ -202,6 +208,9 @@ _I18N = {
         "chat_label":             "后续问题",
         "chat_placeholder":       "就您的病情提出后续问题...",
         "chat_send":              "发送",
+        "red_flags_label":        "红旗症状",
+        "watch_for_label":        "需关注症状",
+        "analyzing_label":        "分析中...",
     },
     "es": {
         "img_label":              "Subir imagen médica",
@@ -246,6 +255,9 @@ _I18N = {
         "chat_label":             "Preguntas de seguimiento",
         "chat_placeholder":       "Haga una pregunta de seguimiento sobre su condición...",
         "chat_send":              "Enviar",
+        "red_flags_label":        "Señales de alerta",
+        "watch_for_label":        "Vigilar",
+        "analyzing_label":        "Analizando...",
     },
     "fr": {
         "img_label":              "Télécharger une image médicale",
@@ -290,6 +302,9 @@ _I18N = {
         "chat_label":             "Questions de suivi",
         "chat_placeholder":       "Posez une question de suivi sur votre état...",
         "chat_send":              "Envoyer",
+        "red_flags_label":        "Signaux d'alarme",
+        "watch_for_label":        "À surveiller",
+        "analyzing_label":        "Analyse en cours...",
     },
     "ja": {
         "img_label":              "医療画像をアップロード",
@@ -334,6 +349,9 @@ _I18N = {
         "chat_label":             "フォローアップの質問",
         "chat_placeholder":       "症状についてフォローアップの質問をしてください...",
         "chat_send":              "送信",
+        "red_flags_label":        "赤信号",
+        "watch_for_label":        "注意症状",
+        "analyzing_label":        "分析中...",
     },
 }
 
@@ -659,6 +677,27 @@ def _empty_soap_html(lang: str) -> str:
     return _build_soap_html("", lang)
 
 
+def _loading_output_html(lang: str) -> str:
+    t = _I18N.get(lang, _I18N["en"])
+    dots = "".join(
+        f"<div style='width:8px; height:8px; background:#ED1C24; border-radius:50%; "
+        f"animation:medipulse 1.4s ease-in-out infinite; animation-delay:{i * 0.2}s;'></div>"
+        for i in range(3)
+    )
+    return (
+        f"<div style='background:#111827; border:1px dashed #374151; border-radius:12px; "
+        f"padding:clamp(40px,8vw,70px) 16px; text-align:center; animation:fadeSlideIn 0.3s ease;'>"
+        f"<div style='font-size:2.5rem; animation:medispin 1.2s linear infinite; "
+        f"display:inline-block;'>&#9877;&#65039;</div>"
+        f"<div style='margin-top:16px; font-size:0.95rem; font-weight:600; color:#e2e8f0;'>"
+        f"{t.get('analyzing_label', 'Analyzing...')}</div>"
+        f"<div style='margin-top:6px; font-size:0.72rem; color:#4b5563; font-family:monospace;'>"
+        f"AMD MI300X &middot; ROCm &middot; 3-Step Pipeline</div>"
+        f"<div style='margin-top:20px; display:flex; justify-content:center; gap:8px;'>{dots}</div>"
+        f"</div>"
+    )
+
+
 def _condition_probability_bars(conditions: list, t: dict) -> str:
     """Render probability bars for each possible condition."""
     if not conditions:
@@ -695,8 +734,10 @@ def _condition_probability_bars(conditions: list, t: dict) -> str:
     return "".join(bars)
 
 
-def _red_flags_panel(red_flags: list, watch_symptoms: list, urgency_reason: str) -> str:
+def _red_flags_panel(red_flags: list, watch_symptoms: list, urgency_reason: str, t: dict = None) -> str:
     """Render red flags and watch symptoms warning panel. Returns empty string if nothing to show."""
+    if t is None:
+        t = _I18N["en"]
     has_flags   = bool(red_flags)
     has_watch   = bool(watch_symptoms)
     has_urgency = bool(urgency_reason)
@@ -711,7 +752,7 @@ def _red_flags_panel(red_flags: list, watch_symptoms: list, urgency_reason: str)
         )
         flags_html = (
             f"<div style='font-size:0.72rem; color:#ef4444; font-weight:700; "
-            f"text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;'>Red Flags</div>"
+            f"text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;'>{t.get('red_flags_label', 'Red Flags')}</div>"
             f"<ul style='margin:0 0 10px; padding-left:18px; list-style:none;'>{items}</ul>"
         )
 
@@ -723,7 +764,7 @@ def _red_flags_panel(red_flags: list, watch_symptoms: list, urgency_reason: str)
         )
         watch_html = (
             f"<div style='font-size:0.72rem; color:#f59e0b; font-weight:700; "
-            f"text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;'>Watch For</div>"
+            f"text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;'>{t.get('watch_for_label', 'Watch For')}</div>"
             f"<ul style='margin:0; padding-left:18px; list-style:none;'>{items}</ul>"
         )
 
@@ -787,7 +828,7 @@ def _build_result_html(result: dict, lang: str) -> str:
     ) if patient_msg else "<p style='color:#6b7280;'>—</p>"
 
     cond_bars      = _condition_probability_bars(conditions, t)
-    alert_panel    = _red_flags_panel(red_flags, watch_symptoms, urgency_reason)
+    alert_panel    = _red_flags_panel(red_flags, watch_symptoms, urgency_reason, t)
 
     return f"""
 <div style='background:#111827; border:1px solid #ED1C24; border-radius:12px;
@@ -833,6 +874,17 @@ def _build_result_html(result: dict, lang: str) -> str:
       {t['actions_label']}
     </div>
     {msg_html}
+    <div style='margin-top:12px;'>
+      <button onclick="(function(){{var el=document.getElementById('tts-btn');if(el){{var b=el.querySelector('button');if(b)b.click();}}}})();"
+              style='background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb;
+                     border-radius:6px; padding:8px 18px; cursor:pointer;
+                     font-size:0.875rem; font-weight:600; min-height:44px;
+                     touch-action:manipulation; transition:background 0.2s;'
+              onmouseover="this.style.background='#1d4ed8'"
+              onmouseout="this.style.background='#1e3a5f'">
+        {t['tts_btn']}
+      </button>
+    </div>
   </div>
 
   <div style='background:#1a1a2e; border-left:4px solid #ED1C24; border-radius:4px;
@@ -1155,7 +1207,8 @@ label span, .gr-form > label {
 }
 footer { display: none !important; }
 
-/* ── TTS button ── */
+/* ── TTS button (Gradio component hidden; HTML button embedded in result) ── */
+#tts-btn { display: none !important; }
 #tts-btn {
     background: #1e3a5f !important;
     color: #93c5fd !important;
@@ -1197,6 +1250,15 @@ footer { display: none !important; }
 @keyframes fadeSlideIn {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes medispin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+@keyframes medipulse {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40%            { transform: scale(1.1); opacity: 1; }
 }
 
 /* ── Respect prefers-reduced-motion ── */
@@ -1559,6 +1621,10 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
     )
 
     submit_btn.click(
+        fn=lambda lc: _loading_output_html(_LANG_MAP.get(lc, "en")),
+        inputs=[lang_radio],
+        outputs=[output_html],
+    ).then(
         fn=predict,
         inputs=[input_img, input_img_2, symptoms_txt, lang_radio, region_selector],
         outputs=[output_html, soap_html, status_bar,
