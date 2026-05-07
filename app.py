@@ -41,7 +41,7 @@ _I18N = {
         "empty_output":           "Upload an image and/or describe symptoms, then click Analyze.",
         "diag_label":             "Diagnosis Suggestion",
         "severity_label":         "Severity",
-        "actions_label":          "Recommended Actions",
+        "actions_label":          "Assessment & Guidance",
         "confidence_label":       "Confidence Score",
         "disclaimer":             "This is an AI assistant, not a licensed physician. Always consult a healthcare professional for serious conditions.",
         "placeholder":            "Please upload an image or enter symptoms.",
@@ -81,7 +81,7 @@ _I18N = {
         "empty_output":           "Tải ảnh và/hoặc mô tả triệu chứng, rồi nhấn Phân tích.",
         "diag_label":             "Gợi ý chẩn đoán",
         "severity_label":         "Mức độ nghiêm trọng",
-        "actions_label":          "Khuyến nghị",
+        "actions_label":          "Đánh giá & Hướng dẫn",
         "confidence_label":       "Độ tin cậy",
         "disclaimer":             "Đây là trợ lý AI, không phải bác sĩ. Hãy tham khảo chuyên gia y tế cho các tình trạng nghiêm trọng.",
         "placeholder":            "Vui lòng tải lên hình ảnh hoặc nhập triệu chứng.",
@@ -121,7 +121,7 @@ _I18N = {
         "empty_output":           "请上传图片和/或描述症状，然后点击分析。",
         "diag_label":             "诊断建议",
         "severity_label":         "严重程度",
-        "actions_label":          "推荐措施",
+        "actions_label":          "评估与指导",
         "confidence_label":       "置信度",
         "disclaimer":             "本工具为AI助手，不能替代执业医师。如有严重病情，请务必咨询专业医疗人员。",
         "placeholder":            "请上传图片或输入症状描述。",
@@ -161,7 +161,7 @@ _I18N = {
         "empty_output":           "Suba una imagen y/o describa sus síntomas, luego haga clic en Analizar.",
         "diag_label":             "Sugerencia de diagnóstico",
         "severity_label":         "Severidad",
-        "actions_label":          "Acciones recomendadas",
+        "actions_label":          "Evaluación y orientación",
         "confidence_label":       "Puntuación de confianza",
         "disclaimer":             "Este es un asistente de IA, no un médico autorizado. Consulte siempre a un profesional de la salud para condiciones graves.",
         "placeholder":            "Por favor, suba una imagen o describa sus síntomas.",
@@ -201,7 +201,7 @@ _I18N = {
         "empty_output":           "Téléchargez une image et/ou décrivez vos symptômes, puis cliquez sur Analyser.",
         "diag_label":             "Suggestion de diagnostic",
         "severity_label":         "Sévérité",
-        "actions_label":          "Actions recommandées",
+        "actions_label":          "Évaluation et conseils",
         "confidence_label":       "Score de confiance",
         "disclaimer":             "Ceci est un assistant IA, pas un médecin agréé. Consultez toujours un professionnel de santé pour les situations graves.",
         "placeholder":            "Veuillez télécharger une image ou décrire vos symptômes.",
@@ -241,7 +241,7 @@ _I18N = {
         "empty_output":           "画像をアップロードし、症状を説明してから分析ボタンをクリックしてください。",
         "diag_label":             "診断提案",
         "severity_label":         "重症度",
-        "actions_label":          "推奨アクション",
+        "actions_label":          "評価とガイダンス",
         "confidence_label":       "信頼スコア",
         "disclaimer":             "これはAIアシスタントであり、有資格の医師ではありません。深刻な症状については必ず医療専門家に相談してください。",
         "placeholder":            "画像をアップロードするか、症状を入力してください。",
@@ -794,29 +794,13 @@ def on_svg_click(svg_id: str, current_regions: list, lang_choice: str) -> tuple:
     return current, _body_map_svg(new_en, lang)
 
 
-def on_lang_change(lang_choice: str, image, symptoms: str, selected_regions):
+def on_lang_change(lang_choice: str, selected_regions):
     lang = _LANG_MAP.get(lang_choice, "en")
-    t = _I18N[lang]
     mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd = _ui_updates(
         lang_choice, current_regions=selected_regions
     )
-
-    region = _regions_to_prompt(selected_regions)
-
-    has_content = bool(image) or bool(symptoms and symptoms.strip())
-    if has_content:
-        try:
-            result = get_pipeline().process(image, None, (symptoms or "").strip(), lang=lang, region=region)
-            out_upd  = _build_result_html(result, lang)
-            soap_upd = _build_soap_html(result.get("soap_note", ""), lang)
-        except Exception as exc:
-            out_upd  = _error_html(t, exc)
-            soap_upd = _empty_soap_html(lang)
-    else:
-        out_upd  = _empty_output_html(lang)
-        soap_upd = _empty_soap_html(lang)
-
-    return mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd, out_upd, soap_upd, get_backend_status_html(lang)
+    return (mode_upd, day1_upd, dayx_upd, sym_upd, btn_upd, region_upd, hint_upd,
+            _empty_output_html(lang), _empty_soap_html(lang), get_backend_status_html(lang))
 
 
 def on_load(request: gr.Request):
@@ -1033,53 +1017,38 @@ BLOCKS_JS = """
     var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
               || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
     setter.call(input, svgId);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, data: svgId }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   });
-
-  /* ── Tab label i18n via MutationObserver on lang dropdown ── */
-  var TAB_LABELS = {
-    'English':    ['Patient View', 'Export for Doctor (SOAP)'],
-    'Ti\\u1ebfng Vi\\u1ec7t': ['D\\u00e0nh cho b\\u1ec7nh nh\\u00e2n', 'Xu\\u1ea5t cho b\\u00e1c s\\u0129 (SOAP)'],
-    '\\u4e2d\\u6587': ['\\u60a3\\u8005\\u89c6\\u56fe', '\\u5bfc\\u51fa\\u7ed9\\u533b\\u751f\\uff08SOAP\\uff09'],
-    'Espa\\u00f1ol': ['Vista del paciente', 'Exportar para m\\u00e9dico (SOAP)'],
-    'Fran\\u00e7ais': ['Vue patient', 'Exporter pour le m\\u00e9decin (SOAP)'],
-    '\\u65e5\\u672c\\u8a9e': ['\\u60a3\\u8005\\u5411\\u3051', '\\u533b\\u5e2b\\u5411\\u3051\\u30a8\\u30af\\u30b9\\u30dd\\u30fc\\u30c8\\uff08SOAP\\uff09'],
-  };
-
-  function updateTabLabels(langDisplay) {
-    var labels = TAB_LABELS[langDisplay] || TAB_LABELS['English'];
-    var tabContainer = document.getElementById('output-tabs');
-    if (!tabContainer) return;
-    var buttons = tabContainer.querySelectorAll('button');
-    var tabButtons = Array.from(buttons).filter(function(b) {
-      return b.closest('#output-tabs') === tabContainer || b.parentElement.closest('#output-tabs') === tabContainer;
-    }).slice(0, 2);
-    if (tabButtons.length < 2) tabButtons = Array.from(tabContainer.querySelectorAll('button')).slice(0, 2);
-    tabButtons.forEach(function(btn, i) {
-      if (labels[i] === undefined) return;
-      btn.childNodes.forEach(function(n) {
-        if (n.nodeType === 3 && n.nodeValue.trim()) n.nodeValue = labels[i];
-      });
-      /* fallback: if no direct text node, set innerText carefully */
-      if (!btn.childNodes.length || !Array.from(btn.childNodes).some(function(n){ return n.nodeType === 3 && n.nodeValue.trim(); })) {
-        btn.textContent = labels[i];
-      }
-    });
-  }
-
-  function watchLangDropdown() {
-    var langCol = document.getElementById('lang-col');
-    if (!langCol) { setTimeout(watchLangDropdown, 500); return; }
-    var observer = new MutationObserver(function() {
-      var inp = langCol.querySelector('input[type="text"], .wrap-inner span');
-      var val = inp ? (inp.value || inp.textContent || '').trim() : '';
-      if (val) updateTabLabels(val);
-    });
-    observer.observe(langCol, { childList: true, subtree: true, characterData: true });
-  }
-  watchLangDropdown();
 }
 """
+
+_TAB_LABELS_JS = """{
+    'English':    ['Patient View', 'Export for Doctor (SOAP)'],
+    'Tiếng Việt': ['Dành cho bệnh nhân', 'Xuất cho bác sĩ (SOAP)'],
+    '中文': ['患者视图', '导出给医生（SOAP）'],
+    'Español': ['Vista del paciente', 'Exportar para médico (SOAP)'],
+    'Français': ['Vue patient', 'Exporter pour le médecin (SOAP)'],
+    '日本語': ['患者向け', '医師向けエクスポート（SOAP）'],
+}"""
+
+UPDATE_TABS_JS = f"""(langDisplay) => {{
+  var TAB_LABELS = {_TAB_LABELS_JS};
+  var labels = TAB_LABELS[langDisplay] || TAB_LABELS['English'];
+  var tabContainer = document.getElementById('output-tabs');
+  if (!tabContainer) return langDisplay;
+  var tabButtons = Array.from(tabContainer.querySelectorAll('button')).slice(0, 2);
+  tabButtons.forEach(function(btn, i) {{
+    if (labels[i] === undefined) return;
+    btn.childNodes.forEach(function(n) {{
+      if (n.nodeType === 3 && n.nodeValue.trim()) n.nodeValue = labels[i];
+    }});
+    if (!Array.from(btn.childNodes).some(function(n){{ return n.nodeType === 3 && n.nodeValue.trim(); }})) {{
+      btn.textContent = labels[i];
+    }}
+  }});
+  return langDisplay;
+}}"""
 
 with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision — Dermatology & Wound Care AI") as demo:
 
@@ -1178,17 +1147,18 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
 
     # Image mode toggle: show/hide second image upload
     img_mode.change(
-        fn=lambda m: gr.update(visible=_I18N["en"]["img_mode_compare"] in m),
-        inputs=[img_mode],
+        fn=lambda m, lc: gr.update(visible=_I18N[_LANG_MAP.get(lc, "en")]["img_mode_compare"] in m),
+        inputs=[img_mode, lang_radio],
         outputs=[input_img_2],
     )
 
     # SVG click → toggle region in dropdown + re-render SVG
-    svg_click_bridge.input(
-        fn=on_svg_click,
-        inputs=[svg_click_bridge, region_selector, lang_radio],
-        outputs=[region_selector, body_map_html],
-    )
+    for _svg_evt in [svg_click_bridge.input, svg_click_bridge.change]:
+        _svg_evt(
+            fn=on_svg_click,
+            inputs=[svg_click_bridge, region_selector, lang_radio],
+            outputs=[region_selector, body_map_html],
+        )
 
     # Dropdown change → re-render SVG (keeps sync when user edits dropdown directly)
     region_selector.change(
@@ -1199,9 +1169,13 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
 
     lang_radio.change(
         fn=on_lang_change,
-        inputs=[lang_radio, input_img, symptoms_txt, region_selector],
+        inputs=[lang_radio, region_selector],
         outputs=[img_mode, input_img, input_img_2, symptoms_txt, submit_btn,
                  region_selector, input_hint_html, output_html, soap_html, status_bar],
+    ).then(
+        fn=None,
+        inputs=[lang_radio],
+        js=UPDATE_TABS_JS,
     )
 
     submit_btn.click(

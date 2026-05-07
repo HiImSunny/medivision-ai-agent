@@ -14,8 +14,14 @@ _LANG_NAMES = {
 }
 
 
+_NO_IMAGE_DESC = "(No image provided — assessment based on patient symptom text only.)"
+_ZERO_METRICS = {"latency_ms": 0, "total_tokens": 0, "tokens_per_sec": 0}
+
+
 def vision_agent(image_path_1, image_path_2, symptoms: str) -> tuple[str, dict]:
     """Step 1: strictly objective visual description. Returns (description_text, metrics)."""
+    if not image_path_1 and not image_path_2:
+        return _NO_IMAGE_DESC, _ZERO_METRICS.copy()
     two_images = bool(image_path_2)
     user_msg = VISION_AGENT_SYSTEM + "\n\n"
     if two_images:
