@@ -2,7 +2,7 @@ import json
 import re
 
 from src.model_loader import generate_response, generate_text
-from src.prompts import VISION_AGENT_SYSTEM, CLINICAL_AGENT_SYSTEM, FORMAT_AGENT_SYSTEM
+from src.prompts import VISION_AGENT_SYSTEM, CLINICAL_AGENT_SYSTEM, PATIENT_AGENT_SYSTEM, SOAP_AGENT_SYSTEM
 
 _LANG_NAMES = {
     "en": "English",
@@ -53,25 +53,19 @@ def clinical_agent(visual_description: str, symptoms: str) -> tuple[dict, dict]:
 
 def format_agent(clinical_json: dict, visual_description: str,
                  symptoms: str, lang: str) -> tuple[str, str, dict]:
-    """Step 3: patient-friendly message + SOAP note. Returns (patient_msg, soap_text, metrics)."""
+    """Step 3a+3b: patient message and SOAP note as two separate LLM calls."""
     lang_name = _LANG_NAMES.get(lang, "English")
-    prompt = (
-        FORMAT_AGENT_SYSTEM + "\n\n"
+    context = (
         f"TARGET LANGUAGE: {lang_name}\n\n"
         f"PATIENT ORIGINAL COMPLAINT: {symptoms or '(none)'}\n\n"
         f"VISUAL DESCRIPTION (Objective):\n{visual_description}\n\n"
         f"CLINICAL JSON:\n{json.dumps(clinical_json, ensure_ascii=False, indent=2)}"
     )
-    raw, metrics = generate_text(prompt)
-    if "===SOAP===" in raw:
-        patient_msg, soap = raw.split("===SOAP===", 1)
-    else:
-        # Fallback: if LLM ignored the delimiter, try to split at first SOAP field
-        import re as _re
-        m = _re.search(r'\n\s*S\s*\(Subjective\)', raw)
-        if m:
-            patient_msg = raw[:m.start()]
-            soap = raw[m.start():].lstrip()
-        else:
-            patient_msg, soap = raw, ""
+    patient_msg, m3a = generate_text(PATIENT_AGENT_SYSTEM + "\n\n" + context)
+    soap,        m3b = generate_text(SOAP_AGENT_SYSTEM    + "\n\n" + context)
+    metrics = {
+        "latency_ms":    m3a["latency_ms"] + m3b["latency_ms"],
+        "total_tokens":  m3a["total_tokens"] + m3b["total_tokens"],
+        "tokens_per_sec": round((m3a.get("tokens_per_sec", 0) + m3b.get("tokens_per_sec", 0)) / 2, 1),
+    }
     return patient_msg.strip(), soap.strip(), metrics
