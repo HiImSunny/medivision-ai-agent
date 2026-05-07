@@ -62,21 +62,32 @@ def check_connection() -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"
 
 
-def generate_response(prompt: str, image_path: str = None,
-                      image_path_2: str = None) -> tuple[str, dict]:
+def generate_response(
+    system_prompt: str,
+    user_prompt: str,
+    image_path: str = None,
+    image_path_2: str = None,
+    max_tokens: int = None,
+    temperature: float = None,
+    force_json: bool = False,
+) -> tuple[str, dict]:
     """
-    Send a request to the vLLM endpoint and return (text_output, metrics).
-    Supports 0, 1, or 2 images (image_path_2 for A/B comparison).
+    Send a chat completion to the vLLM endpoint with proper system/user separation.
 
-    metrics keys:
-        latency_ms  – wall-clock time for the API call in milliseconds
-        total_tokens – total tokens used (prompt + completion), or 0 if unavailable
-        tokens_per_sec – completion tokens / latency, or 0 if unavailable
+    system_prompt → role: system
+    user_prompt   → role: user (may include 0, 1, or 2 images)
 
-    Raises RuntimeError if the backend is unreachable or returns an error.
+    Returns (text_output, metrics).
+    metrics keys: latency_ms, total_tokens, tokens_per_sec
     """
     try:
         client = _get_client()
+        _max_tokens = max_tokens if max_tokens is not None else config.MAX_NEW_TOKENS
+        _temperature = temperature if temperature is not None else config.TEMPERATURE
+
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
 
         if image_path or image_path_2:
             content = []
@@ -88,18 +99,22 @@ def generate_response(prompt: str, image_path: str = None,
                 b64, mime = _encode_image(image_path_2)
                 content.append({"type": "image_url",
                                  "image_url": {"url": f"data:{mime};base64,{b64}"}})
-            content.append({"type": "text", "text": prompt})
-            messages = [{"role": "user", "content": content}]
+            content.append({"type": "text", "text": user_prompt})
+            messages.append({"role": "user", "content": content})
         else:
-            messages = [{"role": "user", "content": prompt}]
+            messages.append({"role": "user", "content": user_prompt})
 
-        t0 = time.perf_counter()
-        response = client.chat.completions.create(
+        kwargs = dict(
             model=config.MODEL_NAME,
             messages=messages,
-            max_tokens=config.MAX_NEW_TOKENS,
-            temperature=config.TEMPERATURE,
+            max_tokens=_max_tokens,
+            temperature=_temperature,
         )
+        if force_json:
+            kwargs["response_format"] = {"type": "json_object"}
+
+        t0 = time.perf_counter()
+        response = client.chat.completions.create(**kwargs)
         latency_ms = (time.perf_counter() - t0) * 1000
 
         usage = getattr(response, "usage", None)
@@ -118,6 +133,18 @@ def generate_response(prompt: str, image_path: str = None,
         raise RuntimeError(f"AMD Cloud backend unreachable: {exc}") from exc
 
 
-def generate_text(prompt: str) -> tuple[str, dict]:
-    """Text-only call — same endpoint as generate_response(), no image encoding."""
-    return generate_response(prompt, image_path=None)
+def generate_text(
+    system_prompt: str,
+    user_prompt: str,
+    max_tokens: int = None,
+    temperature: float = None,
+    force_json: bool = False,
+) -> tuple[str, dict]:
+    """Text-only call — no image encoding."""
+    return generate_response(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        force_json=force_json,
+    )

@@ -659,11 +659,102 @@ def _empty_soap_html(lang: str) -> str:
     return _build_soap_html("", lang)
 
 
+def _condition_probability_bars(conditions: list, t: dict) -> str:
+    """Render probability bars for each possible condition."""
+    if not conditions:
+        return "<span style='color:#6b7280;'>—</span>"
+
+    bars = []
+    for c in conditions:
+        if isinstance(c, dict):
+            name  = c.get("name", "Unknown")
+            prob  = int(c.get("probability", 50))
+            icd10 = c.get("icd10", "")
+        else:
+            name, prob, icd10 = str(c), 50, ""
+
+        fill = "#ef4444" if prob >= 70 else "#f97316" if prob >= 45 else "#eab308"
+        icd_badge = (
+            f"<span style='font-size:0.6rem; color:#6b7280; background:#0f172a; "
+            f"padding:1px 5px; border-radius:3px; margin-left:4px; font-family:monospace;'>"
+            f"{icd10}</span>"
+        ) if icd10 else ""
+
+        bars.append(
+            f"<div style='margin-bottom:10px;'>"
+            f"  <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;'>"
+            f"    <span style='font-size:0.8rem; color:#e2e8f0; font-weight:600;'>{name}{icd_badge}</span>"
+            f"    <span style='font-size:0.75rem; color:{fill}; font-weight:700;'>{prob}%</span>"
+            f"  </div>"
+            f"  <div style='background:#374151; border-radius:9999px; height:7px; overflow:hidden;'>"
+            f"    <div style='background:{fill}; width:{prob}%; height:100%; border-radius:9999px; "
+            f"         transition:width 0.7s ease;'></div>"
+            f"  </div>"
+            f"</div>"
+        )
+    return "".join(bars)
+
+
+def _red_flags_panel(red_flags: list, watch_symptoms: list, urgency_reason: str) -> str:
+    """Render red flags and watch symptoms warning panel. Returns empty string if nothing to show."""
+    has_flags   = bool(red_flags)
+    has_watch   = bool(watch_symptoms)
+    has_urgency = bool(urgency_reason)
+    if not has_flags and not has_watch and not has_urgency:
+        return ""
+
+    flags_html = ""
+    if has_flags:
+        items = "".join(
+            f"<li style='margin:3px 0; color:#fca5a5;'>&#9888; {f}</li>"
+            for f in red_flags
+        )
+        flags_html = (
+            f"<div style='font-size:0.72rem; color:#ef4444; font-weight:700; "
+            f"text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;'>Red Flags</div>"
+            f"<ul style='margin:0 0 10px; padding-left:18px; list-style:none;'>{items}</ul>"
+        )
+
+    watch_html = ""
+    if has_watch:
+        items = "".join(
+            f"<li style='margin:3px 0; color:#fde68a;'>&#128065; {w}</li>"
+            for w in watch_symptoms
+        )
+        watch_html = (
+            f"<div style='font-size:0.72rem; color:#f59e0b; font-weight:700; "
+            f"text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;'>Watch For</div>"
+            f"<ul style='margin:0; padding-left:18px; list-style:none;'>{items}</ul>"
+        )
+
+    urgency_html = ""
+    if has_urgency:
+        urgency_html = (
+            f"<div style='font-size:0.75rem; color:#9ca3af; font-style:italic; "
+            f"border-top:1px solid #374151; padding-top:8px; margin-top:8px;'>"
+            f"&#9432; {urgency_reason}</div>"
+        )
+
+    border_color = "#ef4444" if has_flags else "#f59e0b"
+    bg_color     = "#1c0a0a" if has_flags else "#1c1000"
+
+    return (
+        f"<div style='background:{bg_color}; border:1px solid {border_color}; "
+        f"border-left:4px solid {border_color}; border-radius:8px; "
+        f"padding:12px 14px; margin-bottom:12px;'>"
+        f"{flags_html}{watch_html}{urgency_html}"
+        f"</div>"
+    )
+
+
 def _build_result_html(result: dict, lang: str) -> str:
     t             = _I18N.get(lang, _I18N["en"])
     triage        = result.get("triage_level", "Low")
     patient_msg   = result.get("patient_message", "")
     conditions    = result.get("possible_conditions", [])
+    red_flags     = result.get("red_flags", [])
+    watch_symptoms = result.get("watch_symptoms", [])
+    urgency_reason = result.get("urgency_reason", "")
     metrics       = result.get("_metrics", {})
 
     backend_tag = (
@@ -672,7 +763,6 @@ def _build_result_html(result: dict, lang: str) -> str:
         "border:1px solid #16a34a;'>AMD Cloud</span>"
     )
 
-    # Triage color
     triage_colors = {
         "High":   ("#ef4444", "#7f1d1d"),
         "Medium": ("#f97316", "#431407"),
@@ -680,7 +770,6 @@ def _build_result_html(result: dict, lang: str) -> str:
     }
     t_color, t_bg = triage_colors.get(triage, ("#22c55e", "#052e16"))
 
-    # Red-flag flashing banner
     critical_banner = ""
     if triage == "High":
         critical_banner = f"""
@@ -692,18 +781,13 @@ def _build_result_html(result: dict, lang: str) -> str:
     </span>
   </div>"""
 
-    # Possible conditions chips
-    cond_chips = "".join(
-        f"<span style='background:#1e3a5f; color:#93c5fd; font-size:0.72rem; "
-        f"padding:3px 10px; border-radius:999px; border:1px solid #2563eb;'>{c}</span>"
-        for c in conditions
-    ) if conditions else "<span style='color:#6b7280;'>—</span>"
-
-    # Patient message paragraphs
     msg_html = "".join(
         f"<p style='margin:0 0 8px; color:#d1d5db; line-height:1.6;'>{line}</p>"
         for line in patient_msg.split("\n") if line.strip()
     ) if patient_msg else "<p style='color:#6b7280;'>—</p>"
+
+    cond_bars      = _condition_probability_bars(conditions, t)
+    alert_panel    = _red_flags_panel(red_flags, watch_symptoms, urgency_reason)
 
     return f"""
 <div style='background:#111827; border:1px solid #ED1C24; border-radius:12px;
@@ -737,9 +821,11 @@ def _build_result_html(result: dict, lang: str) -> str:
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
     <div style='font-size:0.72rem; text-transform:uppercase; letter-spacing:.05em;
-                color:#9ca3af; margin-bottom:8px;'>{t['conditions_label']}</div>
-    <div style='display:flex; flex-wrap:wrap; gap:6px;'>{cond_chips}</div>
+                color:#9ca3af; margin-bottom:10px;'>{t['conditions_label']}</div>
+    {cond_bars}
   </div>
+
+  {alert_panel}
 
   <div style='background:#1f2937; border-radius:8px; padding:14px; margin-bottom:12px;'>
     <div style='font-size:0.72rem; text-transform:uppercase; letter-spacing:.05em;
@@ -944,6 +1030,9 @@ def predict(image_1, image_2, symptoms: str, lang_choice: str, selected_regions)
             "visual_description":  result.get("visual_description", ""),
             "possible_conditions": result.get("possible_conditions", []),
             "triage_level":        result.get("triage_level", "Low"),
+            "urgency_reason":      result.get("urgency_reason", ""),
+            "red_flags":           result.get("red_flags", []),
+            "watch_symptoms":      result.get("watch_symptoms", []),
             "patient_message":     patient_msg,
         }
         return (
