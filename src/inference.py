@@ -17,7 +17,7 @@ class MediVisionPipeline:
         symptoms_full = f"{'Region: ' + region + '. ' if region else ''}{symptoms}"
 
         visual_desc, m1 = vision_agent(image_path_1, image_path_2, symptoms_full)
-        clinical,    m2 = clinical_agent(visual_desc, symptoms_full)
+        clinical,    m2 = clinical_agent(visual_desc, symptoms_full, lang=lang)
         patient_msg, soap, m3 = format_agent(clinical, visual_desc, symptoms_full, lang)
 
         metrics = {

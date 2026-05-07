@@ -31,10 +31,12 @@ def vision_agent(image_path_1, image_path_2, symptoms: str) -> tuple[str, dict]:
                              image_path_2=image_path_2 or None)
 
 
-def clinical_agent(visual_description: str, symptoms: str) -> tuple[dict, dict]:
+def clinical_agent(visual_description: str, symptoms: str, lang: str = "en") -> tuple[dict, dict]:
     """Step 2: clinical reasoning → strict JSON. Returns (parsed_dict, metrics)."""
+    lang_name = _LANG_NAMES.get(lang, "English")
     prompt = (
         CLINICAL_AGENT_SYSTEM + "\n\n"
+        f"TARGET LANGUAGE FOR CONDITIONS: {lang_name}\n\n"
         f"VISUAL DESCRIPTION:\n{visual_description}\n\n"
         f"PATIENT SYMPTOMS:\n{symptoms or '(none provided)'}"
     )

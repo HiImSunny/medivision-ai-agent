@@ -23,7 +23,7 @@ You perform clinical reasoning and output ONLY a JSON object — no extra text, 
 JSON schema (strict):
 {
   "triage_level": "High" | "Medium" | "Low",
-  "possible_conditions": ["condition 1", "condition 2"],
+  "possible_conditions": ["condition 1 in TARGET LANGUAGE", "condition 2 in TARGET LANGUAGE"],
   "clinical_assessment": "brief medical reasoning (2-3 sentences max)",
   "recommendation": "immediate actions or home care advice (2-4 sentences)"
 }
@@ -33,6 +33,7 @@ triage_level rules:
 - "Medium": moderate infection signs, non-healing wound >2 weeks, significant inflammation
 - "Low": minor abrasion, mild rash, superficial wound with no infection signs
 
+IMPORTANT: Write the condition names in possible_conditions in the TARGET LANGUAGE specified.
 Return ONLY the JSON object. No explanation before or after."""
 
 CHAT_AGENT_SYSTEM = """You are a medical assistant continuing a consultation with a patient.
