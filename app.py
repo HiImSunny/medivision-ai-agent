@@ -1016,10 +1016,11 @@ FOOTER_HTML = """
     &nbsp;·&nbsp; Track 3: Vision &amp; Multimodal AI &nbsp;·&nbsp; MIT License
   </span>
 </div>
+"""
 
-<script>
-(function() {
-  /* ── SVG body-map click → dispatch to hidden bridge input ── */
+BLOCKS_JS = """
+() => {
+  /* ── SVG body-map click → hidden bridge input ── */
   document.addEventListener('click', function(e) {
     var el = e.target.closest('.bpart');
     if (!el) return;
@@ -1029,16 +1030,58 @@ FOOTER_HTML = """
     if (!bridge) return;
     var input = bridge.querySelector('input, textarea');
     if (!input) return;
-    var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-                         || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-    nativeInputSetter.call(input, svgId);
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+              || Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+    setter.call(input, svgId);
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
-})();
-</script>
+
+  /* ── Tab label i18n via MutationObserver on lang dropdown ── */
+  var TAB_LABELS = {
+    'English':    ['Patient View', 'Export for Doctor (SOAP)'],
+    'Ti\\u1ebfng Vi\\u1ec7t': ['D\\u00e0nh cho b\\u1ec7nh nh\\u00e2n', 'Xu\\u1ea5t cho b\\u00e1c s\\u0129 (SOAP)'],
+    '\\u4e2d\\u6587': ['\\u60a3\\u8005\\u89c6\\u56fe', '\\u5bfc\\u51fa\\u7ed9\\u533b\\u751f\\uff08SOAP\\uff09'],
+    'Espa\\u00f1ol': ['Vista del paciente', 'Exportar para m\\u00e9dico (SOAP)'],
+    'Fran\\u00e7ais': ['Vue patient', 'Exporter pour le m\\u00e9decin (SOAP)'],
+    '\\u65e5\\u672c\\u8a9e': ['\\u60a3\\u8005\\u5411\\u3051', '\\u533b\\u5e2b\\u5411\\u3051\\u30a8\\u30af\\u30b9\\u30dd\\u30fc\\u30c8\\uff08SOAP\\uff09'],
+  };
+
+  function updateTabLabels(langDisplay) {
+    var labels = TAB_LABELS[langDisplay] || TAB_LABELS['English'];
+    var tabContainer = document.getElementById('output-tabs');
+    if (!tabContainer) return;
+    var buttons = tabContainer.querySelectorAll('button');
+    var tabButtons = Array.from(buttons).filter(function(b) {
+      return b.closest('#output-tabs') === tabContainer || b.parentElement.closest('#output-tabs') === tabContainer;
+    }).slice(0, 2);
+    if (tabButtons.length < 2) tabButtons = Array.from(tabContainer.querySelectorAll('button')).slice(0, 2);
+    tabButtons.forEach(function(btn, i) {
+      if (labels[i] === undefined) return;
+      btn.childNodes.forEach(function(n) {
+        if (n.nodeType === 3 && n.nodeValue.trim()) n.nodeValue = labels[i];
+      });
+      /* fallback: if no direct text node, set innerText carefully */
+      if (!btn.childNodes.length || !Array.from(btn.childNodes).some(function(n){ return n.nodeType === 3 && n.nodeValue.trim(); })) {
+        btn.textContent = labels[i];
+      }
+    });
+  }
+
+  function watchLangDropdown() {
+    var langCol = document.getElementById('lang-col');
+    if (!langCol) { setTimeout(watchLangDropdown, 500); return; }
+    var observer = new MutationObserver(function() {
+      var inp = langCol.querySelector('input[type="text"], .wrap-inner span');
+      var val = inp ? (inp.value || inp.textContent || '').trim() : '';
+      if (val) updateTabLabels(val);
+    });
+    observer.observe(langCol, { childList: true, subtree: true, characterData: true });
+  }
+  watchLangDropdown();
+}
 """
 
-with gr.Blocks(css=CSS, theme=gr.themes.Base(), title="MediVision — Dermatology & Wound Care AI") as demo:
+with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision — Dermatology & Wound Care AI") as demo:
 
     gr.HTML(HEADER_HTML)
 
