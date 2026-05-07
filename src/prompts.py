@@ -51,7 +51,7 @@ Do NOT write placeholder text, brackets, or labels like "PART 1" / "PART 2". Wri
 ===SOAP===
 
 --- Clinical SOAP note (after ===SOAP===, always in English) ---
-S (Subjective): Patient's complaint, verbatim or close paraphrase
+S (Subjective): Patient's complaint paraphrased in English (translate from patient language if needed)
 O (Objective): 1-2 sentence summary of visual findings (write "No image provided" if applicable)
 A (Assessment): Possible conditions and clinical reasoning
 P (Plan): Recommended clinical actions

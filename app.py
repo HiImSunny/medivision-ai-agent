@@ -1037,15 +1037,15 @@ UPDATE_TABS_JS = f"""(langDisplay) => {{
   var labels = TAB_LABELS[langDisplay] || TAB_LABELS['English'];
   var tabContainer = document.getElementById('output-tabs');
   if (!tabContainer) return langDisplay;
-  var tabButtons = Array.from(tabContainer.querySelectorAll('button')).slice(0, 2);
-  tabButtons.forEach(function(btn, i) {{
+  /* Gradio renders tab buttons inside a div[role=tablist] */
+  var tablist = tabContainer.querySelector('[role=tablist]') || tabContainer;
+  var tabButtons = Array.from(tablist.querySelectorAll('button[role=tab]'));
+  if (tabButtons.length < 2) tabButtons = Array.from(tablist.querySelectorAll('button'));
+  tabButtons.slice(0, 2).forEach(function(btn, i) {{
     if (labels[i] === undefined) return;
-    btn.childNodes.forEach(function(n) {{
-      if (n.nodeType === 3 && n.nodeValue.trim()) n.nodeValue = labels[i];
-    }});
-    if (!Array.from(btn.childNodes).some(function(n){{ return n.nodeType === 3 && n.nodeValue.trim(); }})) {{
-      btn.textContent = labels[i];
-    }}
+    /* Find the text span inside the button (Gradio wraps label in a span) */
+    var span = btn.querySelector('span') || btn;
+    span.textContent = labels[i];
   }});
   return langDisplay;
 }}"""
@@ -1194,6 +1194,10 @@ with gr.Blocks(css=CSS, js=BLOCKS_JS, theme=gr.themes.Base(), title="MediVision 
             symptoms_txt, submit_btn, region_selector, input_hint_html,
             body_map_html, output_html, soap_html, status_bar,
         ],
+    ).then(
+        fn=None,
+        inputs=[lang_radio],
+        js=UPDATE_TABS_JS,
     )
 
     gr.HTML(FOOTER_HTML)
