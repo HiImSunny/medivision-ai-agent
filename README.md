@@ -103,7 +103,9 @@ medivision-ai-agent/
 │   ├── __init__.py
 │   ├── config.py            # VLLM_API_URL, MODEL_NAME, MOCK_MODE, etc.
 │   ├── model_loader.py      # OpenAI client → vLLM (image base64 + text)
-│   ├── agent.py             # analyze_image_and_text(), mock data pools
+│   ├── agent.py             # Legacy agent (deprecated)
+│   ├── agents.py            # Multi-agent pipeline (A/B comparison, triage, SOAP)
+│   ├── prompts.py           # System prompts for all agents
 │   └── inference.py         # MediVisionPipeline orchestrator
 └── sample_test_images/
     └── ABOUT.md
